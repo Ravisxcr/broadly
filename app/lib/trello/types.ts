@@ -53,6 +53,7 @@ export interface BoardData {
   cover: string;
   memberIds: string[];
   lists: ListData[];
+  locked?: boolean;
 }
 
 export interface BoardTemplate {

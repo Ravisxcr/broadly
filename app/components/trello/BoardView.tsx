@@ -14,6 +14,13 @@ interface BoardViewProps {
   onDragLeaveList: () => void;
   onDropList: (listId: string, e: DragEvent) => void;
   onOpenCard: (cardId: string, listId: string) => void;
+  editingListId: string | null;
+  editingListTitle: string;
+  onStartEditListTitle: (listId: string, currentTitle: string) => void;
+  onCancelEditListTitle: () => void;
+  onEditingListTitleChange: (value: string) => void;
+  onConfirmEditListTitle: () => void;
+  onDeleteList: (listId: string) => void;
   addingCardListId: string | null;
   newCardTitle: string;
   onOpenAddCard: (listId: string) => void;
@@ -38,6 +45,13 @@ export default function BoardView({
   onDragLeaveList,
   onDropList,
   onOpenCard,
+  editingListId,
+  editingListTitle,
+  onStartEditListTitle,
+  onCancelEditListTitle,
+  onEditingListTitleChange,
+  onConfirmEditListTitle,
+  onDeleteList,
   addingCardListId,
   newCardTitle,
   onOpenAddCard,
@@ -51,11 +65,19 @@ export default function BoardView({
   onNewListTitleChange,
   onConfirmAddList,
 }: BoardViewProps) {
+  const locked = !!board.locked;
   return (
-    <div style={{ flex: 1, overflowX: "auto", overflowY: "hidden", padding: "20px 20px", display: "flex", gap: 14, alignItems: "flex-start", background: theme.bgApp }}>
+    <div style={{ flex: 1, overflowY: "hidden", display: "flex", flexDirection: "column", background: theme.bgApp }}>
+      {locked && (
+        <div style={{ padding: "8px 20px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderBottom: "1px solid #FDE68A" }}>
+          🔒 This board is locked — editing is disabled.
+        </div>
+      )}
+      <div style={{ flex: 1, overflowX: "auto", overflowY: "hidden", padding: "20px 20px", display: "flex", gap: 14, alignItems: "flex-start" }}>
       {board.lists.map((list) => {
         const isOver = dragOverListId === list.id;
         const isAdding = addingCardListId === list.id;
+        const isEditingTitle = editingListId === list.id;
         return (
           <div
             key={list.id}
@@ -74,11 +96,61 @@ export default function BoardView({
               border: `1.5px solid ${isOver ? "#4F46E5" : "transparent"}`,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", padding: "4px 6px 10px", fontSize: 13, fontWeight: 700, color: theme.text }}>
-              {list.title}
-              <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: theme.textSecondary, background: theme.panelBg, padding: "2px 7px", borderRadius: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px 10px", fontSize: 13, fontWeight: 700, color: theme.text }}>
+              {isEditingTitle ? (
+                <input
+                  autoFocus
+                  value={editingListTitle}
+                  onChange={(e) => onEditingListTitleChange(e.target.value)}
+                  onBlur={onConfirmEditListTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onConfirmEditListTitle();
+                    if (e.key === "Escape") onCancelEditListTitle();
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "3px 6px",
+                    border: `1px solid #4F46E5`,
+                    borderRadius: 5,
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    background: theme.inputBg,
+                    color: theme.text,
+                  }}
+                />
+              ) : (
+                <div
+                  onClick={() => !locked && onStartEditListTitle(list.id, list.title)}
+                  title={locked ? undefined : "Rename list"}
+                  style={{ flex: 1, minWidth: 0, cursor: locked ? "default" : "text", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {list.title}
+                </div>
+              )}
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary, background: theme.panelBg, padding: "2px 7px", borderRadius: 10 }}>
                 {list.cards.length}
               </div>
+              {!locked && (
+                <button
+                  onClick={() => onDeleteList(list.id)}
+                  title="Delete list"
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: theme.textSecondary,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    lineHeight: 1,
+                    padding: "2px 4px",
+                    borderRadius: 5,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  ×
+                </button>
+              )}
             </div>
 
             <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "0 2px 4px" }}>
@@ -89,14 +161,14 @@ export default function BoardView({
                 return (
                   <div
                     key={c.id}
-                    draggable
-                    onDragStart={() => onDragStartCard(c.id, list.id)}
+                    draggable={!locked}
+                    onDragStart={() => !locked && onDragStartCard(c.id, list.id)}
                     onClick={() => onOpenCard(c.id, list.id)}
                     style={{
                       background: theme.panelBg,
                       borderRadius: 8,
                       padding: "10px 12px",
-                      cursor: "grab",
+                      cursor: locked ? "pointer" : "grab",
                       boxShadow: "0 1px 2px rgba(20,20,30,0.08)",
                       border: `1px solid ${theme.border}`,
                       display: "flex",
@@ -152,74 +224,77 @@ export default function BoardView({
               })}
             </div>
 
-            {isAdding ? (
-              <div style={{ padding: "6px 2px 2px" }}>
-                <textarea
-                  autoFocus
-                  value={newCardTitle}
-                  onChange={(e) => onNewCardTitleChange(e.target.value)}
-                  placeholder="Enter a title…"
-                  style={{ width: "100%", minHeight: 52, padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, resize: "none", background: theme.inputBg, color: theme.text }}
-                />
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  <button
-                    onClick={() => onConfirmAddCard(list.id)}
-                    style={{ padding: "7px 14px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-                  >
-                    Add card
-                  </button>
-                  <button
-                    onClick={onCancelAddCard}
-                    style={{ padding: "7px 10px", background: "transparent", color: theme.textSecondary, border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
+            {!locked &&
+              (isAdding ? (
+                <div style={{ padding: "6px 2px 2px" }}>
+                  <textarea
+                    autoFocus
+                    value={newCardTitle}
+                    onChange={(e) => onNewCardTitleChange(e.target.value)}
+                    placeholder="Enter a title…"
+                    style={{ width: "100%", minHeight: 52, padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, resize: "none", background: theme.inputBg, color: theme.text }}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <button
+                      onClick={() => onConfirmAddCard(list.id)}
+                      style={{ padding: "7px 14px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                    >
+                      Add card
+                    </button>
+                    <button
+                      onClick={onCancelAddCard}
+                      style={{ padding: "7px 10px", background: "transparent", color: theme.textSecondary, border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => onOpenAddCard(list.id)}
-                style={{ padding: "8px 8px", marginTop: 2, fontSize: 12.5, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 6 }}
-              >
-                + Add a card
-              </div>
-            )}
+              ) : (
+                <div
+                  onClick={() => onOpenAddCard(list.id)}
+                  style={{ padding: "8px 8px", marginTop: 2, fontSize: 12.5, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 6 }}
+                >
+                  + Add a card
+                </div>
+              ))}
           </div>
         );
       })}
 
-      {isAddingList ? (
-        <div style={{ width: 264, flexShrink: 0, background: theme.panelBg, borderRadius: 10, padding: 10, border: `1.5px solid ${theme.border}` }}>
-          <input
-            autoFocus
-            value={newListTitle}
-            onChange={(e) => onNewListTitleChange(e.target.value)}
-            placeholder="List name…"
-            style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-          />
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button
-              onClick={onConfirmAddList}
-              style={{ padding: "7px 14px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-            >
-              Add list
-            </button>
-            <button
-              onClick={onCancelAddList}
-              style={{ padding: "7px 10px", background: "transparent", color: theme.textSecondary, border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-            >
-              Cancel
-            </button>
+      {!locked &&
+        (isAddingList ? (
+          <div style={{ width: 264, flexShrink: 0, background: theme.panelBg, borderRadius: 10, padding: 10, border: `1.5px solid ${theme.border}` }}>
+            <input
+              autoFocus
+              value={newListTitle}
+              onChange={(e) => onNewListTitleChange(e.target.value)}
+              placeholder="List name…"
+              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button
+                onClick={onConfirmAddList}
+                style={{ padding: "7px 14px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+              >
+                Add list
+              </button>
+              <button
+                onClick={onCancelAddList}
+                style={{ padding: "7px 10px", background: "transparent", color: theme.textSecondary, border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div
-          onClick={onOpenAddList}
-          style={{ width: 220, flexShrink: 0, padding: "10px 14px", fontSize: 13, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 10, background: theme.subtleBg }}
-        >
-          + Add another list
-        </div>
-      )}
+        ) : (
+          <div
+            onClick={onOpenAddList}
+            style={{ width: 220, flexShrink: 0, padding: "10px 14px", fontSize: 13, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 10, background: theme.subtleBg }}
+          >
+            + Add another list
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

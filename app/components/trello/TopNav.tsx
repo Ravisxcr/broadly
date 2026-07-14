@@ -17,6 +17,17 @@ interface TopNavProps {
   onLogout: () => void;
   onSetLightTheme: () => void;
   onSetDarkTheme: () => void;
+  boardMenuOpen: boolean;
+  onToggleBoardMenu: () => void;
+  onCloseBoardMenu: () => void;
+  editingBoardName: boolean;
+  editingBoardNameValue: string;
+  onStartEditBoardName: () => void;
+  onEditingBoardNameChange: (value: string) => void;
+  onConfirmEditBoardName: () => void;
+  onCancelEditBoardName: () => void;
+  onToggleLockBoard: () => void;
+  onDeleteBoard: () => void;
 }
 
 export default function TopNav({
@@ -34,6 +45,17 @@ export default function TopNav({
   onLogout,
   onSetLightTheme,
   onSetDarkTheme,
+  boardMenuOpen,
+  onToggleBoardMenu,
+  onCloseBoardMenu,
+  editingBoardName,
+  editingBoardNameValue,
+  onStartEditBoardName,
+  onEditingBoardNameChange,
+  onConfirmEditBoardName,
+  onCancelEditBoardName,
+  onToggleLockBoard,
+  onDeleteBoard,
 }: TopNavProps) {
   const dark = themeMode === "dark";
 
@@ -47,8 +69,55 @@ export default function TopNav({
           >
             ←
           </button>
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: activeBoard.cover }} />
-          <div style={{ fontSize: 15, fontWeight: 800 }}>{activeBoard.name}</div>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: activeBoard.cover, flexShrink: 0 }} />
+          {editingBoardName ? (
+            <input
+              autoFocus
+              value={editingBoardNameValue}
+              onChange={(e) => onEditingBoardNameChange(e.target.value)}
+              onBlur={onConfirmEditBoardName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onConfirmEditBoardName();
+                if (e.key === "Escape") onCancelEditBoardName();
+              }}
+              style={{ fontSize: 15, fontWeight: 800, border: `1px solid #4F46E5`, borderRadius: 6, padding: "3px 6px", fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
+            />
+          ) : (
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{activeBoard.name}</div>
+          )}
+          {activeBoard.locked && (
+            <div title="Board is locked" style={{ fontSize: 12 }}>
+              🔒
+            </div>
+          )}
+          {isAdmin && !editingBoardName && (
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={onToggleBoardMenu}
+                title="Board options"
+                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13, fontFamily: "inherit" }}
+              >
+                ⋯
+              </button>
+              {boardMenuOpen && (
+                <>
+                  <div onClick={onCloseBoardMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+                  <div style={{ position: "absolute", top: 32, left: 0, width: 180, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 6 }}>
+                    <div onClick={onStartEditBoardName} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                      Rename board
+                    </div>
+                    <div onClick={onToggleLockBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                      {activeBoard.locked ? "Unlock board" : "Lock board"}
+                    </div>
+                    <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
+                    <div onClick={onDeleteBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                      Delete board
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
       {view === "dashboard" && <div style={{ fontSize: 15, fontWeight: 800 }}>Your boards</div>}

@@ -9,6 +9,7 @@ interface CardModalProps {
   card: CardData;
   listTitle: string;
   roster: Member[];
+  locked: boolean;
   labelPickerOpen: boolean;
   memberPickerOpen: boolean;
   onClose: () => void;
@@ -29,6 +30,7 @@ export default function CardModal({
   card,
   listTitle,
   roster,
+  locked,
   labelPickerOpen,
   memberPickerOpen,
   onClose,
@@ -56,12 +58,18 @@ export default function CardModal({
       style={{ position: "fixed", inset: 0, background: "rgba(20,20,25,0.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "48px 20px", overflowY: "auto", zIndex: 50 }}
     >
       <div onClick={stopProp} style={{ width: 640, maxWidth: "100%", background: theme.panelBg, color: theme.text, borderRadius: 12, overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}>
+        {locked && (
+          <div style={{ margin: "16px 24px 0", padding: "8px 12px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7 }}>
+            🔒 This board is locked — card editing is disabled.
+          </div>
+        )}
         <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>in list {listTitle}</div>
             <textarea
               value={card.title}
               onChange={(e) => onTitleChange(e.target.value)}
+              readOnly={locked}
               style={{ width: "100%", fontSize: 19, fontWeight: 800, border: "none", resize: "none", fontFamily: "inherit", padding: "2px 4px", borderRadius: 6, background: "transparent", color: theme.text }}
             />
           </div>
@@ -83,14 +91,16 @@ export default function CardModal({
                   {lab.name}
                 </div>
               ))}
-              <button
-                onClick={onToggleLabelPicker}
-                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
-              >
-                +
-              </button>
+              {!locked && (
+                <button
+                  onClick={onToggleLabelPicker}
+                  style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                >
+                  +
+                </button>
+              )}
             </div>
-            {labelPickerOpen && (
+            {!locked && labelPickerOpen && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, padding: 10, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
                 {LABEL_PALETTE.map((lc) => {
                   const active = labels.some((sl) => sl.id === lc.id);
@@ -120,14 +130,16 @@ export default function CardModal({
                   {m.initials}
                 </div>
               ))}
-              <button
-                onClick={onToggleMemberPicker}
-                style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
-              >
-                +
-              </button>
+              {!locked && (
+                <button
+                  onClick={onToggleMemberPicker}
+                  style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                >
+                  +
+                </button>
+              )}
             </div>
-            {memberPickerOpen && (
+            {!locked && memberPickerOpen && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, padding: 10, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
                 {roster.map((mc) => {
                   const active = members.some((sm) => sm.id === mc.id);
@@ -160,6 +172,7 @@ export default function CardModal({
             <textarea
               value={card.desc}
               onChange={(e) => onDescChange(e.target.value)}
+              readOnly={locked}
               placeholder="Add a more detailed description…"
               style={{ width: "100%", minHeight: 70, padding: "10px 12px", border: `1px solid ${theme.border}`, borderRadius: 8, fontFamily: "inherit", fontSize: 13.5, resize: "vertical", lineHeight: 1.5, background: theme.inputBg, color: theme.text }}
             />
@@ -178,7 +191,7 @@ export default function CardModal({
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {card.checklist.map((item, i) => (
-                <div key={i} onClick={() => onToggleChecklistItem(i)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 6px", borderRadius: 6, cursor: "pointer" }}>
+                <div key={i} onClick={() => !locked && onToggleChecklistItem(i)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 6px", borderRadius: 6, cursor: locked ? "default" : "pointer" }}>
                   <div
                     style={{
                       width: 16,
@@ -205,20 +218,22 @@ export default function CardModal({
           {/* comments */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Comments</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <input
-                value={newComment}
-                onChange={(e) => onNewCommentChange(e.target.value)}
-                placeholder="Write a comment…"
-                style={{ flex: 1, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-              />
-              <button
-                onClick={onAddComment}
-                style={{ padding: "9px 16px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-              >
-                Send
-              </button>
-            </div>
+            {!locked && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <input
+                  value={newComment}
+                  onChange={(e) => onNewCommentChange(e.target.value)}
+                  placeholder="Write a comment…"
+                  style={{ flex: 1, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
+                />
+                <button
+                  onClick={onAddComment}
+                  style={{ padding: "9px 16px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                >
+                  Send
+                </button>
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {card.comments.map((c, i) => (
                 <div key={i} style={{ display: "flex", gap: 10 }}>
