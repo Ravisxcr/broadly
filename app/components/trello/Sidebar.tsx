@@ -1,8 +1,11 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import { groupByWorkspace } from "../../lib/trello/data";
 import type { BoardData, ThemeColors, ViewName, WorkspaceData } from "../../lib/trello/types";
+
+const WORKSPACE_MENU_HEIGHT = 84;
 
 interface SidebarProps {
   theme: ThemeColors;
@@ -60,6 +63,7 @@ export default function Sidebar({
   onDeleteWorkspace,
 }: SidebarProps) {
   const stopProp = (e: MouseEvent) => e.stopPropagation();
+  const [workspaceMenuRect, setWorkspaceMenuRect] = useState<DOMRect | null>(null);
 
   return (
     <div
@@ -204,26 +208,48 @@ export default function Sidebar({
                   {isAdmin && !isEditingName && (
                     <div onClick={stopProp} style={{ position: "relative", flexShrink: 0 }}>
                       <button
-                        onClick={() => onToggleWorkspaceMenu(workspace.id)}
+                        onClick={(e) => {
+                          setWorkspaceMenuRect(e.currentTarget.getBoundingClientRect());
+                          onToggleWorkspaceMenu(workspace.id);
+                        }}
                         title="Workspace options"
                         style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontSize: 12, fontFamily: "inherit" }}
                       >
                         ⋯
                       </button>
-                      {isMenuOpen && (
-                        <>
-                          <div onClick={onCloseWorkspaceMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
-                          <div style={{ position: "absolute", top: 22, right: 0, width: 160, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 6 }}>
-                            <div onClick={() => onStartEditWorkspaceName(workspace.id, workspace.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
-                              Rename workspace
+                      {isMenuOpen &&
+                        workspaceMenuRect &&
+                        createPortal(
+                          <>
+                            <div onClick={onCloseWorkspaceMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+                            <div
+                              style={{
+                                position: "fixed",
+                                top:
+                                  window.innerHeight - workspaceMenuRect.bottom < WORKSPACE_MENU_HEIGHT + 8
+                                    ? workspaceMenuRect.top - WORKSPACE_MENU_HEIGHT - 4
+                                    : workspaceMenuRect.bottom + 4,
+                                left: Math.max(8, workspaceMenuRect.right - 160),
+                                width: 160,
+                                background: theme.panelBg,
+                                border: `1px solid ${theme.border}`,
+                                borderRadius: 10,
+                                boxShadow: "0 12px 32px rgba(0,0,0,0.16)",
+                                zIndex: 71,
+                                padding: 6,
+                              }}
+                            >
+                              <div onClick={() => onStartEditWorkspaceName(workspace.id, workspace.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                                Rename workspace
+                              </div>
+                              <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
+                              <div onClick={() => onDeleteWorkspace(workspace.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                                Delete workspace
+                              </div>
                             </div>
-                            <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
-                            <div onClick={() => onDeleteWorkspace(workspace.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
-                              Delete workspace
-                            </div>
-                          </div>
-                        </>
-                      )}
+                          </>,
+                          document.body
+                        )}
                     </div>
                   )}
                 </div>

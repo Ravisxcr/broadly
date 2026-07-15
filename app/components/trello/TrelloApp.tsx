@@ -50,7 +50,9 @@ interface AppState {
   newWorkspaceName: string;
   editingWorkspaceId: string | null;
   editingWorkspaceNameValue: string;
+  editingWorkspaceSource: "sidebar" | "dashboard" | null;
   workspaceMenuOpenId: string | null;
+  workspaceMenuSource: "sidebar" | "dashboard" | null;
 }
 
 function initialState(): AppState {
@@ -89,7 +91,9 @@ function initialState(): AppState {
     newWorkspaceName: "",
     editingWorkspaceId: null,
     editingWorkspaceNameValue: "",
+    editingWorkspaceSource: null,
     workspaceMenuOpenId: null,
+    workspaceMenuSource: null,
   };
 }
 
@@ -412,22 +416,33 @@ export default function TrelloApp() {
     createWorkspaceMutation.mutate({ name });
   };
 
-  const toggleWorkspaceMenu = (workspaceId: string) => update((s) => ({ workspaceMenuOpenId: s.workspaceMenuOpenId === workspaceId ? null : workspaceId }));
-  const closeWorkspaceMenu = () => update({ workspaceMenuOpenId: null });
+  const toggleWorkspaceMenu = (workspaceId: string, source: "sidebar" | "dashboard") =>
+    update((s) =>
+      s.workspaceMenuOpenId === workspaceId && s.workspaceMenuSource === source
+        ? { workspaceMenuOpenId: null, workspaceMenuSource: null }
+        : { workspaceMenuOpenId: workspaceId, workspaceMenuSource: source }
+    );
+  const closeWorkspaceMenu = () => update({ workspaceMenuOpenId: null, workspaceMenuSource: null });
 
-  const startEditWorkspaceName = (workspaceId: string, currentName: string) =>
-    update({ editingWorkspaceId: workspaceId, editingWorkspaceNameValue: currentName, workspaceMenuOpenId: null });
-  const cancelEditWorkspaceName = () => update({ editingWorkspaceId: null, editingWorkspaceNameValue: "" });
+  const startEditWorkspaceName = (workspaceId: string, currentName: string, source: "sidebar" | "dashboard") =>
+    update({
+      editingWorkspaceId: workspaceId,
+      editingWorkspaceNameValue: currentName,
+      editingWorkspaceSource: source,
+      workspaceMenuOpenId: null,
+      workspaceMenuSource: null,
+    });
+  const cancelEditWorkspaceName = () => update({ editingWorkspaceId: null, editingWorkspaceNameValue: "", editingWorkspaceSource: null });
   const confirmEditWorkspaceName = () => {
     const workspaceId = state.editingWorkspaceId;
     const name = state.editingWorkspaceNameValue.trim();
-    update({ editingWorkspaceId: null, editingWorkspaceNameValue: "" });
+    update({ editingWorkspaceId: null, editingWorkspaceNameValue: "", editingWorkspaceSource: null });
     if (!workspaceId || !name) return;
     updateWorkspaceMutation.mutate({ workspaceId, name });
   };
 
   const deleteWorkspace = (workspaceId: string) => {
-    update({ workspaceMenuOpenId: null });
+    update({ workspaceMenuOpenId: null, workspaceMenuSource: null });
     if (boards.some((b) => b.workspaceId === workspaceId)) {
       window.alert("Move or delete its boards first.");
       return;
@@ -602,12 +617,12 @@ export default function TrelloApp() {
           collapsedWorkspaceIds={state.collapsedWorkspaceIds}
           onToggleWorkspaceCollapse={toggleWorkspaceCollapse}
           onOpenCreateWorkspace={openCreateWorkspace}
-          workspaceMenuOpenId={state.workspaceMenuOpenId}
-          onToggleWorkspaceMenu={toggleWorkspaceMenu}
+          workspaceMenuOpenId={state.workspaceMenuSource === "sidebar" ? state.workspaceMenuOpenId : null}
+          onToggleWorkspaceMenu={(workspaceId) => toggleWorkspaceMenu(workspaceId, "sidebar")}
           onCloseWorkspaceMenu={closeWorkspaceMenu}
-          editingWorkspaceId={state.editingWorkspaceId}
+          editingWorkspaceId={state.editingWorkspaceSource === "sidebar" ? state.editingWorkspaceId : null}
           editingWorkspaceNameValue={state.editingWorkspaceNameValue}
-          onStartEditWorkspaceName={startEditWorkspaceName}
+          onStartEditWorkspaceName={(workspaceId, currentName) => startEditWorkspaceName(workspaceId, currentName, "sidebar")}
           onEditingWorkspaceNameChange={(value) => update({ editingWorkspaceNameValue: value })}
           onConfirmEditWorkspaceName={confirmEditWorkspaceName}
           onCancelEditWorkspaceName={cancelEditWorkspaceName}
@@ -668,12 +683,12 @@ export default function TrelloApp() {
               onToggleLockBoard={toggleLockBoard}
               onDeleteBoard={deleteBoard}
               onOpenCreateWorkspace={openCreateWorkspace}
-              workspaceMenuOpenId={state.workspaceMenuOpenId}
-              onToggleWorkspaceMenu={toggleWorkspaceMenu}
+              workspaceMenuOpenId={state.workspaceMenuSource === "dashboard" ? state.workspaceMenuOpenId : null}
+              onToggleWorkspaceMenu={(workspaceId) => toggleWorkspaceMenu(workspaceId, "dashboard")}
               onCloseWorkspaceMenu={closeWorkspaceMenu}
-              editingWorkspaceId={state.editingWorkspaceId}
+              editingWorkspaceId={state.editingWorkspaceSource === "dashboard" ? state.editingWorkspaceId : null}
               editingWorkspaceNameValue={state.editingWorkspaceNameValue}
-              onStartEditWorkspaceName={startEditWorkspaceName}
+              onStartEditWorkspaceName={(workspaceId, currentName) => startEditWorkspaceName(workspaceId, currentName, "dashboard")}
               onEditingWorkspaceNameChange={(value) => update({ editingWorkspaceNameValue: value })}
               onConfirmEditWorkspaceName={confirmEditWorkspaceName}
               onCancelEditWorkspaceName={cancelEditWorkspaceName}
