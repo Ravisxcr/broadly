@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import * as api from "../../lib/trello/api";
 import { AVATAR_COLORS, DEFAULT_ROSTER, getThemeColors } from "../../lib/trello/data";
@@ -40,6 +40,7 @@ interface AppState {
   theme: ThemeMode;
   profileMenuOpen: boolean;
   boardMenuOpenId: string | null;
+  boardInfoOpenId: string | null;
   editingBoardId: string | null;
   editingBoardNameValue: string;
 }
@@ -68,9 +69,10 @@ function initialState(): AppState {
     newBoardTemplate: "todo3",
     inviteName: "",
     inviteEmail: "",
-    theme: "light",
+    theme: "system",
     profileMenuOpen: false,
     boardMenuOpenId: null,
+    boardInfoOpenId: null,
     editingBoardId: null,
     editingBoardNameValue: "",
   };
@@ -113,7 +115,18 @@ export default function TrelloApp() {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
   }
 
-  const theme = getThemeColors(state.theme === "dark");
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const theme = getThemeColors(state.theme === "system" ? systemPrefersDark : state.theme === "dark");
 
   // Mutations (declared unconditionally, ahead of the early returns below, per the
   // Rules of Hooks) — each syncs the ["boards"] query cache on success; the ones that
@@ -301,6 +314,9 @@ export default function TrelloApp() {
 
   const toggleBoardMenu = (boardId: string) => update((s) => ({ boardMenuOpenId: s.boardMenuOpenId === boardId ? null : boardId }));
   const closeBoardMenu = () => update({ boardMenuOpenId: null });
+
+  const openBoardInfo = (boardId: string) => update({ boardInfoOpenId: boardId, boardMenuOpenId: null });
+  const closeBoardInfo = () => update({ boardInfoOpenId: null });
 
   const startEditBoardName = (boardId: string, currentName: string) => update({ editingBoardId: boardId, editingBoardNameValue: currentName, boardMenuOpenId: null });
   const cancelEditBoardName = () => update({ editingBoardId: null, editingBoardNameValue: "" });
@@ -517,6 +533,7 @@ export default function TrelloApp() {
             onLogout={logout}
             onSetLightTheme={() => setTheme("light")}
             onSetDarkTheme={() => setTheme("dark")}
+            onSetSystemTheme={() => setTheme("system")}
             boardMenuOpen={!!activeBoardRaw && state.boardMenuOpenId === activeBoardRaw.id}
             onToggleBoardMenu={() => activeBoardRaw && toggleBoardMenu(activeBoardRaw.id)}
             onCloseBoardMenu={closeBoardMenu}
@@ -534,12 +551,16 @@ export default function TrelloApp() {
             <DashboardView
               theme={theme}
               boards={visibleBoards}
+              roster={state.roster}
               isAdmin={isAdmin}
               onOpenBoard={openBoard}
               onOpenCreateBoard={openCreateBoard}
               boardMenuOpenId={state.boardMenuOpenId}
               onToggleBoardMenu={toggleBoardMenu}
               onCloseBoardMenu={closeBoardMenu}
+              boardInfoOpenId={state.boardInfoOpenId}
+              onOpenBoardInfo={openBoardInfo}
+              onCloseBoardInfo={closeBoardInfo}
               editingBoardId={state.editingBoardId}
               editingBoardNameValue={state.editingBoardNameValue}
               onStartEditBoardName={startEditBoardName}

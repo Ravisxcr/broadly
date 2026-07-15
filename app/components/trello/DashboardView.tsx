@@ -1,17 +1,21 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import type { BoardData, ThemeColors } from "../../lib/trello/types";
+import type { BoardData, Member, ThemeColors } from "../../lib/trello/types";
 
 interface DashboardViewProps {
   theme: ThemeColors;
   boards: BoardData[];
+  roster: Member[];
   isAdmin: boolean;
   onOpenBoard: (boardId: string) => void;
   onOpenCreateBoard: () => void;
   boardMenuOpenId: string | null;
   onToggleBoardMenu: (boardId: string) => void;
   onCloseBoardMenu: () => void;
+  boardInfoOpenId: string | null;
+  onOpenBoardInfo: (boardId: string) => void;
+  onCloseBoardInfo: () => void;
   editingBoardId: string | null;
   editingBoardNameValue: string;
   onStartEditBoardName: (boardId: string, currentName: string) => void;
@@ -25,12 +29,16 @@ interface DashboardViewProps {
 export default function DashboardView({
   theme,
   boards,
+  roster,
   isAdmin,
   onOpenBoard,
   onOpenCreateBoard,
   boardMenuOpenId,
   onToggleBoardMenu,
   onCloseBoardMenu,
+  boardInfoOpenId,
+  onOpenBoardInfo,
+  onCloseBoardInfo,
   editingBoardId,
   editingBoardNameValue,
   onStartEditBoardName,
@@ -70,6 +78,9 @@ export default function DashboardView({
                     <>
                       <div onClick={onCloseBoardMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
                       <div style={{ position: "absolute", top: 28, right: 0, width: 170, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 6 }}>
+                        <div onClick={() => onOpenBoardInfo(b.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                          Board info
+                        </div>
                         <div onClick={() => onStartEditBoardName(b.id, b.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
                           Rename board
                         </div>
@@ -82,6 +93,9 @@ export default function DashboardView({
                         </div>
                       </div>
                     </>
+                  )}
+                  {boardInfoOpenId === b.id && (
+                    <BoardInfoPanel theme={theme} board={b} roster={roster} onClose={onCloseBoardInfo} />
                   )}
                 </div>
               )}
@@ -125,5 +139,87 @@ export default function DashboardView({
         </div>
       </div>
     </div>
+  );
+}
+
+function BoardInfoPanel({
+  theme,
+  board,
+  roster,
+  onClose,
+}: {
+  theme: ThemeColors;
+  board: BoardData;
+  roster: Member[];
+  onClose: () => void;
+}) {
+  const stopProp = (e: MouseEvent) => e.stopPropagation();
+  const members = board.memberIds.map((id) => roster.find((m) => m.id === id)).filter((m): m is Member => !!m);
+  const creator = members[0] ?? null;
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.35)" }} />
+      <div
+        onClick={stopProp}
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 300,
+          maxWidth: "90vw",
+          background: theme.panelBg,
+          border: `1px solid ${theme.border}`,
+          borderRadius: 12,
+          boxShadow: "0 20px 48px rgba(0,0,0,0.24)",
+          zIndex: 81,
+          padding: 18,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: theme.text }}>{board.name}</div>
+          <button
+            onClick={onClose}
+            style={{ border: "none", background: "transparent", color: theme.textSecondary, cursor: "pointer", fontSize: 16, fontFamily: "inherit", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+          Created by
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          {creator ? (
+            <>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: creator.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {creator.initials}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{creator.name}</div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: theme.textSecondary }}>Unknown</div>
+          )}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+          Members ({members.length})
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {members.map((m) => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: m.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {m.initials}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: theme.textSecondary }}>{m.email}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

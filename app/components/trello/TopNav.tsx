@@ -1,5 +1,6 @@
 "use client";
 
+import { Monitor, Moon, Sun } from "lucide-react";
 import type { BoardData, Member, ThemeColors, ThemeMode, ViewName } from "../../lib/trello/types";
 
 interface TopNavProps {
@@ -17,6 +18,7 @@ interface TopNavProps {
   onLogout: () => void;
   onSetLightTheme: () => void;
   onSetDarkTheme: () => void;
+  onSetSystemTheme: () => void;
   boardMenuOpen: boolean;
   onToggleBoardMenu: () => void;
   onCloseBoardMenu: () => void;
@@ -45,6 +47,7 @@ export default function TopNav({
   onLogout,
   onSetLightTheme,
   onSetDarkTheme,
+  onSetSystemTheme,
   boardMenuOpen,
   onToggleBoardMenu,
   onCloseBoardMenu,
@@ -58,6 +61,8 @@ export default function TopNav({
   onDeleteBoard,
 }: TopNavProps) {
   const dark = themeMode === "dark";
+  const isLight = themeMode === "light";
+  const isSystem = themeMode === "system";
 
   return (
     <div style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 20px", borderBottom: `1px solid ${theme.border}`, background: theme.panelBg }}>
@@ -153,15 +158,27 @@ export default function TopNav({
               <div style={{ display: "flex", gap: 6, padding: "2px 10px 8px" }}>
                 <button
                   onClick={onSetLightTheme}
-                  style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer", background: dark ? "transparent" : "#4F46E5", color: dark ? theme.textSecondary : "#fff" }}
+                  title="Light"
+                  aria-label="Light theme"
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: isLight ? "#4F46E5" : "transparent", color: isLight ? "#fff" : theme.textSecondary }}
                 >
-                  Light
+                  <Sun size={14} />
                 </button>
                 <button
                   onClick={onSetDarkTheme}
-                  style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer", background: dark ? "#4F46E5" : "transparent", color: dark ? "#fff" : theme.textSecondary }}
+                  title="Dark"
+                  aria-label="Dark theme"
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: dark ? "#4F46E5" : "transparent", color: dark ? "#fff" : theme.textSecondary }}
                 >
-                  Dark
+                  <Moon size={14} />
+                </button>
+                <button
+                  onClick={onSetSystemTheme}
+                  title="System"
+                  aria-label="System theme"
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: isSystem ? "#4F46E5" : "transparent", color: isSystem ? "#fff" : theme.textSecondary }}
+                >
+                  <Monitor size={14} />
                 </button>
               </div>
               <div onClick={onLogout} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48", marginTop: 2 }}>

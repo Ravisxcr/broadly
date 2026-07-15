@@ -1,5 +1,5 @@
 export type ViewName = "login" | "dashboard" | "board" | "admin";
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "system";
 export type Role = "admin" | "member";
 
 export interface Member {
