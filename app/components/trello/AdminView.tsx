@@ -28,7 +28,8 @@ export default function AdminView({
   onToggleBoardAccess,
 }: AdminViewProps) {
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", maxWidth: 760 }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
+    <div style={{ maxWidth: "85%", margin: "0 auto" }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Members</div>
       <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>People who can be invited onto boards in this workspace.</div>
 
@@ -38,17 +39,17 @@ export default function AdminView({
             <div style={{ width: 32, height: 32, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {m.initials}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700 }}>{m.name}</div>
-              <div style={{ fontSize: 12, color: theme.textSecondary }}>{m.email}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+              <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}>
               {m.role === "admin" ? "Admin" : "Member"}
             </div>
             {m.role !== "admin" && (
               <button
                 onClick={() => onRemoveMember(m.id)}
-                style={{ width: 26, height: 26, border: "none", background: theme.subtleBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                style={{ width: 26, height: 26, flexShrink: 0, border: "none", background: theme.subtleBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
               >
                 ✕
               </button>
@@ -57,22 +58,22 @@ export default function AdminView({
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
         <input
           value={inviteName}
           onChange={(e) => onInviteNameChange(e.target.value)}
           placeholder="Name"
-          style={{ flex: 1, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
+          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         />
         <input
           value={inviteEmail}
           onChange={(e) => onInviteEmailChange(e.target.value)}
           placeholder="Email"
-          style={{ flex: 1, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
+          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         />
         <button
           onClick={onInviteMember}
-          style={{ padding: "9px 18px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}
+          style={{ flexShrink: 0, padding: "9px 18px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}
         >
           Invite
         </button>
@@ -118,6 +119,7 @@ export default function AdminView({
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

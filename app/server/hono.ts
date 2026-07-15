@@ -1,14 +1,19 @@
 import { Hono } from "hono";
 import { randomUUID } from "crypto";
 import clientPromise from "@/app/lib/mongodb";
-import { initialBoards, COLUMN_TEMPLATES, BOARD_COVERS } from "@/app/lib/trello/data";
-import type { BoardData, CardData } from "@/app/lib/trello/types";
+import { initialBoards, COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER } from "@/app/lib/trello/data";
+import type { BoardData, CardData, Member } from "@/app/lib/trello/types";
 
 const app = new Hono().basePath("/api");
 
 async function getCollection() {
   const client = await clientPromise;
   return client.db().collection<BoardData>("boards");
+}
+
+async function getMembersCollection() {
+  const client = await clientPromise;
+  return client.db().collection<Member>("members");
 }
 
 async function findBoard(boardId: string): Promise<BoardData | null> {
@@ -44,6 +49,16 @@ app.get("/boards", async (c) => {
   }
   const boards = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(boards);
+});
+
+app.get("/members", async (c) => {
+  const collection = await getMembersCollection();
+  const count = await collection.countDocuments();
+  if (count === 0) {
+    await collection.insertMany(DEFAULT_ROSTER);
+  }
+  const members = await collection.find({}, { projection: { _id: 0 } }).toArray();
+  return c.json(members);
 });
 
 app.get("/boards/:boardId", async (c) => {
