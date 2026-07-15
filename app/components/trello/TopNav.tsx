@@ -1,6 +1,6 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Lock, Monitor, Moon, MoreHorizontal, Sun } from "lucide-react";
 import type { BoardData, Member, ThemeColors, ThemeMode, ViewName } from "../../lib/trello/types";
 
 interface TopNavProps {
@@ -70,9 +70,9 @@ export default function TopNav({
         <>
           <button
             onClick={onGoToDashboard}
-            style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, fontSize: 14 }}
+            style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            ←
+            <ArrowLeft size={15} />
           </button>
           <div style={{ width: 10, height: 10, borderRadius: 3, background: activeBoard.cover, flexShrink: 0 }} />
           {editingBoardName ? (
@@ -91,8 +91,8 @@ export default function TopNav({
             <div style={{ fontSize: 15, fontWeight: 800 }}>{activeBoard.name}</div>
           )}
           {activeBoard.locked && (
-            <div title="Board is locked" style={{ fontSize: 12 }}>
-              🔒
+            <div title="Board is locked" style={{ display: "flex", color: theme.textSecondary }}>
+              <Lock size={13} />
             </div>
           )}
           {isAdmin && !editingBoardName && (
@@ -100,9 +100,9 @@ export default function TopNav({
               <button
                 onClick={onToggleBoardMenu}
                 title="Board options"
-                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13, fontFamily: "inherit" }}
+                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                ⋯
+                <MoreHorizontal size={15} />
               </button>
               {boardMenuOpen && (
                 <>

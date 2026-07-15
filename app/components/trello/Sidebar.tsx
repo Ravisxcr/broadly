@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
+import { ChevronDown, ChevronLeft, ChevronRight, Lock, MoreHorizontal, Plus } from "lucide-react";
 import { groupByWorkspace } from "../../lib/trello/data";
 import type { BoardData, ThemeColors, ViewName, WorkspaceData } from "../../lib/trello/types";
 
@@ -104,9 +105,12 @@ export default function Sidebar({
             cursor: "pointer",
             color: theme.textSecondary,
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          {sidebarOpen ? "‹" : "›"}
+          {sidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
         </button>
       </div>
 
@@ -192,7 +196,11 @@ export default function Sidebar({
                       {workspace.name}
                     </span>
                   )}
-                  {!isEditingName && <span style={{ fontSize: 9, color: theme.textSecondary, flexShrink: 0 }}>{collapsed ? "▸" : "▾"}</span>}
+                  {!isEditingName && (
+                    <span style={{ color: theme.textSecondary, flexShrink: 0, display: "flex" }}>
+                      {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                    </span>
+                  )}
                   {!isEditingName && (
                     <button
                       onClick={(e) => {
@@ -200,9 +208,9 @@ export default function Sidebar({
                         onOpenCreateBoard(workspace.id);
                       }}
                       title="Add board"
-                      style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontSize: 13, fontFamily: "inherit", flexShrink: 0 }}
+                      style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      +
+                      <Plus size={14} />
                     </button>
                   )}
                   {isAdmin && !isEditingName && (
@@ -213,9 +221,9 @@ export default function Sidebar({
                           onToggleWorkspaceMenu(workspace.id);
                         }}
                         title="Workspace options"
-                        style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontSize: 12, fontFamily: "inherit" }}
+                        style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
-                        ⋯
+                        <MoreHorizontal size={14} />
                       </button>
                       {isMenuOpen &&
                         workspaceMenuRect &&
@@ -277,7 +285,11 @@ export default function Sidebar({
                     {sidebarOpen && (
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                         {b.name}
-                        {b.locked && <span style={{ marginLeft: 5, fontSize: 11 }}>🔒</span>}
+                        {b.locked && (
+                          <span style={{ marginLeft: 5, display: "inline-flex", verticalAlign: "middle" }}>
+                            <Lock size={11} />
+                          </span>
+                        )}
                       </span>
                     )}
                   </div>

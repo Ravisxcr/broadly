@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import type { BoardData, Member, ThemeColors } from "../../lib/trello/types";
 
 interface AdminViewProps {
@@ -49,9 +50,9 @@ export default function AdminView({
             {m.role !== "admin" && (
               <button
                 onClick={() => onRemoveMember(m.id)}
-                style={{ width: 26, height: 26, flexShrink: 0, border: "none", background: theme.subtleBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                style={{ width: 26, height: 26, flexShrink: 0, border: "none", background: theme.subtleBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                ✕
+                <X size={14} />
               </button>
             )}
           </div>

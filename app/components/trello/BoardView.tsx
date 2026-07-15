@@ -1,6 +1,7 @@
 "use client";
 
 import type { DragEvent } from "react";
+import { Check, Lock, Plus, X } from "lucide-react";
 import type { BoardData, Label, Member, ThemeColors } from "../../lib/trello/types";
 import { labelById, memberById } from "../../lib/trello/data";
 
@@ -69,8 +70,8 @@ export default function BoardView({
   return (
     <div style={{ flex: 1, overflowY: "hidden", display: "flex", flexDirection: "column", background: theme.bgApp }}>
       {locked && (
-        <div style={{ padding: "8px 20px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderBottom: "1px solid #FDE68A" }}>
-          🔒 This board is locked — editing is disabled.
+        <div style={{ padding: "8px 20px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderBottom: "1px solid #FDE68A", display: "flex", alignItems: "center", gap: 6 }}>
+          <Lock size={13} /> This board is locked — editing is disabled.
         </div>
       )}
       <div style={{ flex: 1, overflowX: "auto", overflowY: "hidden", padding: "20px 20px", display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -141,14 +142,14 @@ export default function BoardView({
                     background: "transparent",
                     color: theme.textSecondary,
                     cursor: "pointer",
-                    fontSize: 14,
                     lineHeight: 1,
                     padding: "2px 4px",
                     borderRadius: 5,
                     fontFamily: "inherit",
+                    display: "flex",
                   }}
                 >
-                  ×
+                  <X size={14} />
                 </button>
               )}
             </div>
@@ -191,8 +192,8 @@ export default function BoardView({
                         <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary, background: theme.subtleBg, padding: "2px 7px", borderRadius: 5 }}>{c.due}</div>
                       )}
                       {c.checklist.length > 0 && (
-                        <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary }}>
-                          ✓ {done}/{c.checklist.length}
+                        <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary, display: "flex", alignItems: "center", gap: 3 }}>
+                          <Check size={12} /> {done}/{c.checklist.length}
                         </div>
                       )}
                       <div style={{ marginLeft: "auto", display: "flex" }}>
@@ -252,9 +253,9 @@ export default function BoardView({
               ) : (
                 <div
                   onClick={() => onOpenAddCard(list.id)}
-                  style={{ padding: "8px 8px", marginTop: 2, fontSize: 12.5, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 6 }}
+                  style={{ padding: "8px 8px", marginTop: 2, fontSize: 12.5, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 6, display: "flex", alignItems: "center", gap: 5 }}
                 >
-                  + Add a card
+                  <Plus size={14} /> Add a card
                 </div>
               ))}
           </div>
@@ -289,9 +290,9 @@ export default function BoardView({
         ) : (
           <div
             onClick={onOpenAddList}
-            style={{ width: 220, flexShrink: 0, padding: "10px 14px", fontSize: 13, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 10, background: theme.subtleBg }}
+            style={{ width: 220, flexShrink: 0, padding: "10px 14px", fontSize: 13, fontWeight: 700, color: theme.textSecondary, cursor: "pointer", borderRadius: 10, background: theme.subtleBg, display: "flex", alignItems: "center", gap: 6 }}
           >
-            + Add another list
+            <Plus size={15} /> Add another list
           </div>
         ))}
       </div>

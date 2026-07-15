@@ -1,6 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { Check, Lock, Plus, X } from "lucide-react";
 import { LABEL_PALETTE, labelById, memberById } from "../../lib/trello/data";
 import type { CardData, Member, ThemeColors } from "../../lib/trello/types";
 
@@ -59,8 +60,8 @@ export default function CardModal({
     >
       <div onClick={stopProp} style={{ width: 640, maxWidth: "100%", background: theme.panelBg, color: theme.text, borderRadius: 12, overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}>
         {locked && (
-          <div style={{ margin: "16px 24px 0", padding: "8px 12px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7 }}>
-            🔒 This board is locked — card editing is disabled.
+          <div style={{ margin: "16px 24px 0", padding: "8px 12px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7, display: "flex", alignItems: "center", gap: 6 }}>
+            <Lock size={13} /> This board is locked — card editing is disabled.
           </div>
         )}
         <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -75,9 +76,9 @@ export default function CardModal({
           </div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, fontSize: 15, flexShrink: 0 }}
+            style={{ width: 30, height: 30, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            ✕
+            <X size={15} />
           </button>
         </div>
 
@@ -94,9 +95,9 @@ export default function CardModal({
               {!locked && (
                 <button
                   onClick={onToggleLabelPicker}
-                  style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                  style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
-                  +
+                  <Plus size={13} />
                 </button>
               )}
             </div>
@@ -133,9 +134,9 @@ export default function CardModal({
               {!locked && (
                 <button
                   onClick={onToggleMemberPicker}
-                  style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, fontSize: 13 }}
+                  style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
-                  +
+                  <Plus size={14} />
                 </button>
               )}
             </div>
@@ -204,10 +205,9 @@ export default function CardModal({
                       alignItems: "center",
                       justifyContent: "center",
                       color: "#fff",
-                      fontSize: 10,
                     }}
                   >
-                    {item.done ? "✓" : ""}
+                    {item.done && <Check size={11} />}
                   </div>
                   <div style={{ fontSize: 13, color: item.done ? "#B3AFA6" : theme.text, textDecoration: item.done ? "line-through" : "none" }}>{item.text}</div>
                 </div>

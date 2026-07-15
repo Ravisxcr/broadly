@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
+import { Lock, MoreHorizontal, Plus, X } from "lucide-react";
 import { groupByWorkspace } from "../../lib/trello/data";
 import type { BoardData, Member, ThemeColors, WorkspaceData } from "../../lib/trello/types";
 
@@ -114,9 +115,9 @@ export default function DashboardView({
                       onToggleWorkspaceMenu(workspace.id);
                     }}
                     title="Workspace options"
-                    style={{ width: 22, height: 22, border: "none", background: "transparent", borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontSize: 13, fontFamily: "inherit" }}
+                    style={{ width: 22, height: 22, border: "none", background: "transparent", borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    ⋯
+                    <MoreHorizontal size={14} />
                   </button>
                   {isWsMenuOpen &&
                     workspaceMenuRect &&
@@ -170,9 +171,9 @@ export default function DashboardView({
                         <button
                           onClick={() => onToggleBoardMenu(b.id)}
                           title="Board options"
-                          style={{ width: 24, height: 24, border: "none", background: "rgba(0,0,0,0.25)", borderRadius: 6, cursor: "pointer", color: "#fff", fontSize: 13, fontFamily: "inherit" }}
+                          style={{ width: 24, height: 24, border: "none", background: "rgba(0,0,0,0.25)", borderRadius: 6, cursor: "pointer", color: "#fff", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
                         >
-                          ⋯
+                          <MoreHorizontal size={14} />
                         </button>
                         {isMenuOpen && (
                           <>
@@ -199,7 +200,7 @@ export default function DashboardView({
                         )}
                       </div>
                     )}
-                    {b.locked && <div style={{ position: "absolute", top: 10, left: 12, fontSize: 13 }}>🔒</div>}
+                    {b.locked && <div style={{ position: "absolute", top: 10, left: 12, color: "#fff", display: "flex" }}><Lock size={13} /></div>}
                     {isEditing ? (
                       <input
                         autoFocus
@@ -233,9 +234,10 @@ export default function DashboardView({
                   color: theme.textSecondary,
                   fontWeight: 700,
                   fontSize: 13,
+                  gap: 6,
                 }}
               >
-                + Create new board
+                <Plus size={14} /> Create new board
               </div>
             </div>
           </div>
@@ -258,7 +260,7 @@ export default function DashboardView({
             fontSize: 13,
           }}
         >
-          + New workspace
+          <Plus size={14} /> New workspace
         </div>
       )}
     </div>
@@ -304,9 +306,9 @@ function BoardInfoPanel({
           <div style={{ fontSize: 15, fontWeight: 800, color: theme.text }}>{board.name}</div>
           <button
             onClick={onClose}
-            style={{ border: "none", background: "transparent", color: theme.textSecondary, cursor: "pointer", fontSize: 16, fontFamily: "inherit", lineHeight: 1 }}
+            style={{ border: "none", background: "transparent", color: theme.textSecondary, cursor: "pointer", fontFamily: "inherit", lineHeight: 1, display: "flex" }}
           >
-            ×
+            <X size={16} />
           </button>
         </div>
 
