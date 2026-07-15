@@ -29,6 +29,7 @@ The app is a single product, **Boardly** (a Trello-style board app):
 - `app/lib/trello/types.ts` and `app/lib/trello/data.ts` hold the domain types (Board/List/Card/Member/Label), seed/demo data, and theme color derivation (`getThemeColors`).
 - Login is a fake picker between two hardcoded demo users (admin "Ari", member "Jess"); role determines board visibility — admins see every board, members only see boards whose `memberIds` include them.
 - Card drag-and-drop between lists uses native HTML5 DnD (`draggable` + `onDragStart`/`onDragOver`/`onDrop`); the in-flight card/list id is tracked in a `useRef` (not state) so dragging doesn't trigger re-renders.
+- Icons are `lucide-react` components (already a dependency), not text glyphs (`+`, `×`, `✓`, `←`, `⋯`, emoji, etc.) — sized `size={12–16}` to match surrounding text, per convention in `app/components/trello/TopNav.tsx`.
 
 ### Backend: MongoDB + Hono + TanStack Query
 
