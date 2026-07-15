@@ -2,7 +2,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronLeft, ChevronRight, Lock, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, Lock, MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
 import { groupByWorkspace } from "../../lib/trello/data";
 import type { BoardData, ThemeColors, ViewName, WorkspaceData } from "../../lib/trello/types";
 
@@ -141,7 +141,9 @@ export default function Sidebar({
             color: theme.textSecondary,
           }}
         >
-          <div style={{ width: 16, height: 16, borderRadius: 4, background: theme.textSecondary, opacity: 0.3, flexShrink: 0 }} />
+          <span style={{ display: "flex", flexShrink: 0 }}>
+            <LayoutGrid size={16} />
+          </span>
           {sidebarOpen && "Boards"}
         </div>
         {isAdmin && (
@@ -160,12 +162,14 @@ export default function Sidebar({
               color: theme.textSecondary,
             }}
           >
-            <div style={{ width: 16, height: 16, borderRadius: 4, background: "#4F46E5", opacity: 0.5, flexShrink: 0 }} />
+            <span style={{ display: "flex", flexShrink: 0 }}>
+              <ShieldCheck size={16} />
+            </span>
             {sidebarOpen && "Admin panel"}
           </div>
         )}
 
-        {groupByWorkspace(boards, workspaces).map(({ workspace, boards: workspaceBoards }) => {
+        {sidebarOpen && groupByWorkspace(boards, workspaces).map(({ workspace, boards: workspaceBoards }) => {
           const collapsed = sidebarOpen && collapsedWorkspaceIds.includes(workspace.id);
           const isEditingName = editingWorkspaceId === workspace.id;
           const isMenuOpen = workspaceMenuOpenId === workspace.id;
@@ -298,7 +302,7 @@ export default function Sidebar({
           );
         })}
 
-        {isAdmin && (
+        {sidebarOpen && isAdmin && (
           <div
             onClick={onOpenCreateWorkspace}
             title="New workspace"
