@@ -195,7 +195,7 @@ export default function TrelloApp() {
   });
 
   const updateWorkspaceMutation = useMutation({
-    mutationFn: (vars: { workspaceId: string; name: string }) => api.updateWorkspace(vars.workspaceId, { name: vars.name }),
+    mutationFn: (vars: { workspaceId: string; patch: Partial<Pick<WorkspaceData, "name" | "memberIds">> }) => api.updateWorkspace(vars.workspaceId, vars.patch),
     onSuccess: (workspace) => {
       queryClient.setQueryData<WorkspaceData[]>(["workspaces"], (old) => old?.map((w) => (w.id === workspace.id ? workspace : w)));
     },
@@ -345,6 +345,9 @@ export default function TrelloApp() {
     boards
       .filter((b) => b.memberIds.includes(userId))
       .forEach((b) => updateBoardMutation.mutate({ boardId: b.id, patch: { memberIds: b.memberIds.filter((id) => id !== userId) } }));
+    workspaces
+      .filter((w) => w.memberIds.includes(userId))
+      .forEach((w) => updateWorkspaceMutation.mutate({ workspaceId: w.id, patch: { memberIds: w.memberIds.filter((id) => id !== userId) } }));
   };
 
   const toggleBoardAccess = (boardId: string, userId: string) => {
@@ -352,6 +355,13 @@ export default function TrelloApp() {
     if (!board) return;
     const memberIds = board.memberIds.includes(userId) ? board.memberIds.filter((id) => id !== userId) : [...board.memberIds, userId];
     updateBoardMutation.mutate({ boardId, patch: { memberIds } });
+  };
+
+  const toggleWorkspaceAccess = (workspaceId: string, userId: string) => {
+    const workspace = workspaces.find((w) => w.id === workspaceId);
+    if (!workspace) return;
+    const memberIds = workspace.memberIds.includes(userId) ? workspace.memberIds.filter((id) => id !== userId) : [...workspace.memberIds, userId];
+    updateWorkspaceMutation.mutate({ workspaceId, patch: { memberIds } });
   };
 
   const openCreateBoard = (workspaceId?: string) =>
@@ -438,7 +448,7 @@ export default function TrelloApp() {
     const name = state.editingWorkspaceNameValue.trim();
     update({ editingWorkspaceId: null, editingWorkspaceNameValue: "", editingWorkspaceSource: null });
     if (!workspaceId || !name) return;
-    updateWorkspaceMutation.mutate({ workspaceId, name });
+    updateWorkspaceMutation.mutate({ workspaceId, patch: { name } });
   };
 
   const deleteWorkspace = (workspaceId: string) => {
@@ -583,7 +593,14 @@ export default function TrelloApp() {
   const activeBoardRaw = boards.find((b) => b.id === state.activeBoardId) ?? null;
   const currentUser = state.roster.find((m) => m.id === state.currentUserId);
   const isAdmin = !!currentUser && currentUser.role === "admin";
-  const visibleBoards = isAdmin ? boards : boards.filter((b) => state.currentUserId !== null && b.memberIds.includes(state.currentUserId));
+  const visibleBoards = isAdmin
+    ? boards
+    : boards.filter((b) => {
+        if (!state.currentUserId) return false;
+        if (b.memberIds.includes(state.currentUserId)) return true;
+        const workspace = workspaces.find((w) => w.id === b.workspaceId);
+        return !!workspace?.memberIds.includes(state.currentUserId);
+      });
 
   let selectedCard: CardData | null = null;
   let selectedListTitle = "";
@@ -701,6 +718,7 @@ export default function TrelloApp() {
               theme={theme}
               roster={state.roster}
               boards={boards}
+              workspaces={workspaces}
               inviteName={state.inviteName}
               inviteEmail={state.inviteEmail}
               onInviteNameChange={(value) => update({ inviteName: value })}
@@ -708,6 +726,7 @@ export default function TrelloApp() {
               onInviteMember={inviteMember}
               onRemoveMember={removeMember}
               onToggleBoardAccess={toggleBoardAccess}
+              onToggleWorkspaceAccess={toggleWorkspaceAccess}
             />
           )}
 

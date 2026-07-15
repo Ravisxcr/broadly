@@ -1,12 +1,13 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { BoardData, Member, ThemeColors } from "../../lib/trello/types";
+import type { BoardData, Member, ThemeColors, WorkspaceData } from "../../lib/trello/types";
 
 interface AdminViewProps {
   theme: ThemeColors;
   roster: Member[];
   boards: BoardData[];
+  workspaces: WorkspaceData[];
   inviteName: string;
   inviteEmail: string;
   onInviteNameChange: (value: string) => void;
@@ -14,12 +15,14 @@ interface AdminViewProps {
   onInviteMember: () => void;
   onRemoveMember: (memberId: string) => void;
   onToggleBoardAccess: (boardId: string, memberId: string) => void;
+  onToggleWorkspaceAccess: (workspaceId: string, memberId: string) => void;
 }
 
 export default function AdminView({
   theme,
   roster,
   boards,
+  workspaces,
   inviteName,
   inviteEmail,
   onInviteNameChange,
@@ -27,6 +30,7 @@ export default function AdminView({
   onInviteMember,
   onRemoveMember,
   onToggleBoardAccess,
+  onToggleWorkspaceAccess,
 }: AdminViewProps) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
@@ -80,8 +84,53 @@ export default function AdminView({
         </button>
       </div>
 
+      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>
+      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
+        Members with workspace access can see every board in that workspace, current and future, without needing individual board access. Admins always see everything.
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 32 }}>
+        {workspaces.map((w) => (
+          <div key={w.id} style={{ border: `1px solid ${theme.border}`, borderRadius: 10, padding: "14px 16px", background: theme.panelBg }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: w.color }} />
+              <div style={{ fontSize: 14, fontWeight: 700 }}>{w.name}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {roster.map((m) => {
+                const hasAccess = w.memberIds.includes(m.id) || m.role === "admin";
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => m.role !== "admin" && onToggleWorkspaceAccess(w.id, m.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "5px 10px 5px 5px",
+                      borderRadius: 20,
+                      border: `1px solid ${theme.border}`,
+                      cursor: m.role === "admin" ? "default" : "pointer",
+                      opacity: hasAccess ? 1 : 0.4,
+                      background: hasAccess ? "#EEF2FF" : "#fff",
+                    }}
+                  >
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {m.initials}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{m.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Board access</div>
-      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>Only members with access can see a board. Admins always see everything.</div>
+      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
+        Grants access to a single board. Members with workspace access above already see every board here, whether or not they&apos;re toggled on below.
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {boards.map((b) => (
@@ -92,11 +141,14 @@ export default function AdminView({
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {roster.map((m) => {
-                const hasAccess = b.memberIds.includes(m.id) || m.role === "admin";
+                const workspace = workspaces.find((w) => w.id === b.workspaceId);
+                const hasWorkspaceAccess = !!workspace?.memberIds.includes(m.id);
+                const hasAccess = b.memberIds.includes(m.id) || m.role === "admin" || hasWorkspaceAccess;
                 return (
                   <div
                     key={m.id}
-                    onClick={() => onToggleBoardAccess(b.id, m.id)}
+                    onClick={() => m.role !== "admin" && !hasWorkspaceAccess && onToggleBoardAccess(b.id, m.id)}
+                    title={hasWorkspaceAccess ? `${m.name} has access via workspace membership` : undefined}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -104,7 +156,7 @@ export default function AdminView({
                       padding: "5px 10px 5px 5px",
                       borderRadius: 20,
                       border: `1px solid ${theme.border}`,
-                      cursor: "pointer",
+                      cursor: m.role === "admin" || hasWorkspaceAccess ? "default" : "pointer",
                       opacity: hasAccess ? 1 : 0.4,
                       background: hasAccess ? "#EEF2FF" : "#fff",
                     }}

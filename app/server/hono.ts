@@ -73,6 +73,7 @@ app.get("/workspaces", async (c) => {
   if (count === 0) {
     await collection.insertMany(DEFAULT_WORKSPACES);
   }
+  await collection.updateMany({ memberIds: { $exists: false } }, { $set: { memberIds: [] } });
   const workspaces = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(workspaces);
 });
@@ -82,18 +83,24 @@ app.post("/workspaces", async (c) => {
   const name = body.name?.trim() || "New Workspace";
   const collection = await getWorkspacesCollection();
   const count = await collection.countDocuments();
-  const workspace: WorkspaceData = { id: randomUUID(), name, color: WORKSPACE_COLORS[count % WORKSPACE_COLORS.length] };
+  const workspace: WorkspaceData = { id: randomUUID(), name, color: WORKSPACE_COLORS[count % WORKSPACE_COLORS.length], memberIds: [] };
   await collection.insertOne({ ...workspace });
   return c.json(workspace, 201);
 });
 
 app.patch("/workspaces/:workspaceId", async (c) => {
-  const { name } = await c.req.json<{ name?: string }>();
-  const trimmed = name?.trim();
-  if (!trimmed) return c.json({ error: "name is required" }, 400);
+  const body = await c.req.json<Partial<Pick<WorkspaceData, "name" | "memberIds">>>();
+  const set: Partial<Pick<WorkspaceData, "name" | "memberIds">> = {};
+  if (body.name !== undefined) {
+    const trimmed = body.name.trim();
+    if (!trimmed) return c.json({ error: "name is required" }, 400);
+    set.name = trimmed;
+  }
+  if (body.memberIds !== undefined) set.memberIds = body.memberIds;
+  if (Object.keys(set).length === 0) return c.json({ error: "Nothing to update" }, 400);
   const workspaceId = c.req.param("workspaceId");
   const collection = await getWorkspacesCollection();
-  const result = await collection.findOneAndUpdate({ id: workspaceId }, { $set: { name: trimmed } }, { returnDocument: "after", projection: { _id: 0 } });
+  const result = await collection.findOneAndUpdate({ id: workspaceId }, { $set: set }, { returnDocument: "after", projection: { _id: 0 } });
   if (!result) return c.json({ error: "Workspace not found" }, 404);
   return c.json(result);
 });

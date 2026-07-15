@@ -32,7 +32,7 @@ export function createWorkspace(input: { name: string }): Promise<WorkspaceData>
   return request<WorkspaceData>("/api/workspaces", { method: "POST", body: JSON.stringify(input) });
 }
 
-export function updateWorkspace(workspaceId: string, patch: { name: string }): Promise<WorkspaceData> {
+export function updateWorkspace(workspaceId: string, patch: Partial<Pick<WorkspaceData, "name" | "memberIds">>): Promise<WorkspaceData> {
   return request<WorkspaceData>(`/api/workspaces/${workspaceId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 

@@ -61,6 +61,7 @@ export interface WorkspaceData {
   id: string;
   name: string;
   color: string;
+  memberIds: string[];
 }
 
 export interface BoardTemplate {

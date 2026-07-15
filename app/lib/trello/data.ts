@@ -22,7 +22,7 @@ export const BOARD_COVERS = ["#3B82F6", "#EA580C", "#9333EA", "#16A34A", "#47556
 
 export const WORKSPACE_COLORS = ["#4F46E5", "#0891B2", "#16A34A", "#DB2777", "#EA580C", "#475569"];
 
-export const DEFAULT_WORKSPACES: WorkspaceData[] = [{ id: "w1", name: "Boardly Studio", color: "#4F46E5" }];
+export const DEFAULT_WORKSPACES: WorkspaceData[] = [{ id: "w1", name: "Boardly Studio", color: "#4F46E5", memberIds: [] }];
 
 export function groupByWorkspace(boards: BoardData[], workspaces: WorkspaceData[]): { workspace: WorkspaceData; boards: BoardData[] }[] {
   return workspaces.map((workspace) => ({ workspace, boards: boards.filter((b) => b.workspaceId === workspace.id) }));
