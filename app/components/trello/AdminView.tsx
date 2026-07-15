@@ -112,7 +112,7 @@ export default function AdminView({
                       border: `1px solid ${theme.border}`,
                       cursor: m.role === "admin" ? "default" : "pointer",
                       opacity: hasAccess ? 1 : 0.4,
-                      background: hasAccess ? "#EEF2FF" : "#fff",
+                      background: hasAccess ? theme.accentSubtle : theme.panelBg,
                     }}
                   >
                     <div style={{ width: 20, height: 20, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -158,7 +158,7 @@ export default function AdminView({
                       border: `1px solid ${theme.border}`,
                       cursor: m.role === "admin" || hasWorkspaceAccess ? "default" : "pointer",
                       opacity: hasAccess ? 1 : 0.4,
-                      background: hasAccess ? "#EEF2FF" : "#fff",
+                      background: hasAccess ? theme.accentSubtle : theme.panelBg,
                     }}
                   >
                     <div style={{ width: 20, height: 20, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>

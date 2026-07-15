@@ -79,4 +79,6 @@ export interface ThemeColors {
   border: string;
   subtleBg: string;
   inputBg: string;
+  accent: string;
+  accentSubtle: string;
 }

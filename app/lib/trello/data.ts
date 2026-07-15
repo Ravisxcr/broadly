@@ -165,5 +165,7 @@ export function getThemeColors(dark: boolean): ThemeColors {
     border: dark ? "#2E3038" : "#E8E6E1",
     subtleBg: dark ? "#262830" : "#F4F3F0",
     inputBg: dark ? "#1A1B21" : "#FAFAF9",
+    accent: "#4F46E5",
+    accentSubtle: dark ? "rgba(79,70,229,0.28)" : "#EEF2FF",
   };
 }

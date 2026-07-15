@@ -282,7 +282,7 @@ export default function Sidebar({
                       cursor: "pointer",
                       fontSize: 13,
                       fontWeight: 600,
-                      background: b.id === activeBoardId && view === "board" ? "#F4F3F0" : "transparent",
+                      background: b.id === activeBoardId && view === "board" ? theme.subtleBg : "transparent",
                     }}
                   >
                     <div style={{ width: 16, height: 16, borderRadius: 4, background: b.cover, flexShrink: 0 }} />

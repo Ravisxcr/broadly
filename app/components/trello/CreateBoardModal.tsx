@@ -73,7 +73,7 @@ export default function CreateBoardModal({
               <div
                 key={t.id}
                 onClick={() => onSelectTemplate(t.id)}
-                style={{ padding: "10px 12px", border: `1.5px solid ${selected ? "#4F46E5" : "#E8E6E1"}`, background: selected ? "#EEF2FF" : "#fff", borderRadius: 9, cursor: "pointer" }}
+                style={{ padding: "10px 12px", border: `1.5px solid ${selected ? theme.accent : theme.border}`, background: selected ? theme.accentSubtle : theme.panelBg, borderRadius: 9, cursor: "pointer" }}
               >
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.text }}>{t.name}</div>
                 <div style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>{t.desc}</div>
