@@ -33,6 +33,7 @@ interface AppState {
   labelPickerOpen: boolean;
   memberPickerOpen: boolean;
   newComment: string;
+  newChecklistItem: string;
   creatingBoard: boolean;
   newBoardName: string;
   newBoardTemplate: string;
@@ -74,6 +75,7 @@ function initialState(): AppState {
     labelPickerOpen: false,
     memberPickerOpen: false,
     newComment: "",
+    newChecklistItem: "",
     creatingBoard: false,
     newBoardName: "",
     newBoardTemplate: "todo3",
@@ -561,6 +563,28 @@ export default function TrelloApp() {
     updateCardMutation.mutate({ boardId, cardId, patch: { checklist } });
   };
 
+  const addChecklistItem = () => {
+    const text = state.newChecklistItem.trim();
+    const boardId = state.activeBoardId;
+    const cardId = state.selectedCardId;
+    if (!text || !boardId || !cardId) return;
+    const card = findCard(boards, boardId, cardId);
+    if (!card) return;
+    const checklist = [...card.checklist, { text, done: false }];
+    update({ newChecklistItem: "" });
+    updateCardMutation.mutate({ boardId, cardId, patch: { checklist } });
+  };
+
+  const deleteChecklistItem = (idx: number) => {
+    const boardId = state.activeBoardId;
+    const cardId = state.selectedCardId;
+    if (!boardId || !cardId) return;
+    const card = findCard(boards, boardId, cardId);
+    if (!card) return;
+    const checklist = card.checklist.filter((_, i) => i !== idx);
+    updateCardMutation.mutate({ boardId, cardId, patch: { checklist } });
+  };
+
   const onCardTitleChange = (value: string) => {
     const boardId = state.activeBoardId;
     const cardId = state.selectedCardId;
@@ -817,6 +841,10 @@ export default function TrelloApp() {
           onToggleLabel={toggleLabelOnCard}
           onToggleMember={toggleMemberOnCard}
           onToggleChecklistItem={toggleChecklistItem}
+          onDeleteChecklistItem={deleteChecklistItem}
+          newChecklistItem={state.newChecklistItem}
+          onNewChecklistItemChange={(value) => update({ newChecklistItem: value })}
+          onAddChecklistItem={addChecklistItem}
           newComment={state.newComment}
           onNewCommentChange={(value) => update({ newComment: value })}
           onAddComment={addComment}

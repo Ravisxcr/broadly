@@ -22,6 +22,10 @@ interface CardModalProps {
   onToggleLabel: (labelId: string) => void;
   onToggleMember: (memberId: string) => void;
   onToggleChecklistItem: (index: number) => void;
+  onDeleteChecklistItem: (index: number) => void;
+  newChecklistItem: string;
+  onNewChecklistItemChange: (value: string) => void;
+  onAddChecklistItem: () => void;
   newComment: string;
   onNewCommentChange: (value: string) => void;
   onAddComment: () => void;
@@ -44,6 +48,10 @@ export default function CardModal({
   onToggleLabel,
   onToggleMember,
   onToggleChecklistItem,
+  onDeleteChecklistItem,
+  newChecklistItem,
+  onNewChecklistItemChange,
+  onAddChecklistItem,
   newComment,
   onNewCommentChange,
   onAddComment,
@@ -223,10 +231,43 @@ export default function CardModal({
                   >
                     {item.done && <Check size={10} />}
                   </div>
-                  <div style={{ fontSize: 12.5, color: item.done ? "#B3AFA6" : theme.text, textDecoration: item.done ? "line-through" : "none" }}>{item.text}</div>
+                  <div style={{ flex: 1, fontSize: 12.5, color: item.done ? "#B3AFA6" : theme.text, textDecoration: item.done ? "line-through" : "none" }}>{item.text}</div>
+                  {!locked && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteChecklistItem(i);
+                      }}
+                      style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+            {!locked && (
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input
+                  value={newChecklistItem}
+                  onChange={(e) => onNewChecklistItemChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onAddChecklistItem();
+                    }
+                  }}
+                  placeholder="Add an item…"
+                  style={{ flex: 1, padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text }}
+                />
+                <button
+                  onClick={onAddChecklistItem}
+                  style={{ padding: "8px 14px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                >
+                  Add
+                </button>
+              </div>
+            )}
           </div>
 
           {/* comments */}
