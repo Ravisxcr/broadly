@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { randomUUID } from "crypto";
 import clientPromise from "@/app/lib/mongodb";
-import { initialBoards, COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER } from "@/app/lib/trello/data";
-import type { BoardData, CardData, Member } from "@/app/lib/trello/types";
+import { initialBoards, COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
+import type { BoardData, CardData, Member, WorkspaceData } from "@/app/lib/trello/types";
 
 const app = new Hono().basePath("/api");
 
@@ -14,6 +14,11 @@ async function getCollection() {
 async function getMembersCollection() {
   const client = await clientPromise;
   return client.db().collection<Member>("members");
+}
+
+async function getWorkspacesCollection() {
+  const client = await clientPromise;
+  return client.db().collection<WorkspaceData>("workspaces");
 }
 
 async function findBoard(boardId: string): Promise<BoardData | null> {
@@ -47,6 +52,7 @@ app.get("/boards", async (c) => {
   if (count === 0) {
     await collection.insertMany(initialBoards());
   }
+  await collection.updateMany({ workspaceId: { $exists: false } }, { $set: { workspaceId: DEFAULT_WORKSPACES[0].id } });
   const boards = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(boards);
 });
@@ -61,6 +67,48 @@ app.get("/members", async (c) => {
   return c.json(members);
 });
 
+app.get("/workspaces", async (c) => {
+  const collection = await getWorkspacesCollection();
+  const count = await collection.countDocuments();
+  if (count === 0) {
+    await collection.insertMany(DEFAULT_WORKSPACES);
+  }
+  const workspaces = await collection.find({}, { projection: { _id: 0 } }).toArray();
+  return c.json(workspaces);
+});
+
+app.post("/workspaces", async (c) => {
+  const body = await c.req.json<{ name?: string }>();
+  const name = body.name?.trim() || "New Workspace";
+  const collection = await getWorkspacesCollection();
+  const count = await collection.countDocuments();
+  const workspace: WorkspaceData = { id: randomUUID(), name, color: WORKSPACE_COLORS[count % WORKSPACE_COLORS.length] };
+  await collection.insertOne({ ...workspace });
+  return c.json(workspace, 201);
+});
+
+app.patch("/workspaces/:workspaceId", async (c) => {
+  const { name } = await c.req.json<{ name?: string }>();
+  const trimmed = name?.trim();
+  if (!trimmed) return c.json({ error: "name is required" }, 400);
+  const workspaceId = c.req.param("workspaceId");
+  const collection = await getWorkspacesCollection();
+  const result = await collection.findOneAndUpdate({ id: workspaceId }, { $set: { name: trimmed } }, { returnDocument: "after", projection: { _id: 0 } });
+  if (!result) return c.json({ error: "Workspace not found" }, 404);
+  return c.json(result);
+});
+
+app.delete("/workspaces/:workspaceId", async (c) => {
+  const workspaceId = c.req.param("workspaceId");
+  const boardsCollection = await getCollection();
+  const boardCount = await boardsCollection.countDocuments({ workspaceId });
+  if (boardCount > 0) return c.json({ error: "Move or delete its boards first" }, 400);
+  const collection = await getWorkspacesCollection();
+  const result = await collection.deleteOne({ id: workspaceId });
+  if (result.deletedCount === 0) return c.json({ error: "Workspace not found" }, 404);
+  return c.json({ ok: true });
+});
+
 app.get("/boards/:boardId", async (c) => {
   const board = await findBoard(c.req.param("boardId"));
   if (!board) return c.json({ error: "Board not found" }, 404);
@@ -68,7 +116,7 @@ app.get("/boards/:boardId", async (c) => {
 });
 
 app.post("/boards", async (c) => {
-  const body = await c.req.json<{ name?: string; templateId?: string; memberIds?: string[] }>();
+  const body = await c.req.json<{ name?: string; templateId?: string; memberIds?: string[]; workspaceId?: string }>();
   const name = body.name?.trim() || "New Board";
   const template = COLUMN_TEMPLATES.find((t) => t.id === body.templateId) ?? COLUMN_TEMPLATES[0];
   const collection = await getCollection();
@@ -77,6 +125,7 @@ app.post("/boards", async (c) => {
     id: randomUUID(),
     name,
     cover: BOARD_COVERS[count % BOARD_COVERS.length],
+    workspaceId: body.workspaceId ?? DEFAULT_WORKSPACES[0].id,
     memberIds: body.memberIds ?? [],
     lists: template.lists.map((title) => ({ id: randomUUID(), title, cards: [] })),
   };

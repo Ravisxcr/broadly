@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import * as api from "../../lib/trello/api";
 import { AVATAR_COLORS, DEFAULT_ROSTER, getThemeColors } from "../../lib/trello/data";
-import type { BoardData, CardData, Member, ThemeMode, ViewName } from "../../lib/trello/types";
+import type { BoardData, CardData, Member, ThemeMode, ViewName, WorkspaceData } from "../../lib/trello/types";
 import LoginView from "./LoginView";
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
@@ -12,6 +12,7 @@ import DashboardView from "./DashboardView";
 import AdminView from "./AdminView";
 import BoardView from "./BoardView";
 import CreateBoardModal from "./CreateBoardModal";
+import CreateWorkspaceModal from "./CreateWorkspaceModal";
 import CardModal from "./CardModal";
 
 interface AppState {
@@ -35,6 +36,7 @@ interface AppState {
   creatingBoard: boolean;
   newBoardName: string;
   newBoardTemplate: string;
+  newBoardWorkspaceId: string;
   inviteName: string;
   inviteEmail: string;
   theme: ThemeMode;
@@ -43,6 +45,12 @@ interface AppState {
   boardInfoOpenId: string | null;
   editingBoardId: string | null;
   editingBoardNameValue: string;
+  collapsedWorkspaceIds: string[];
+  creatingWorkspace: boolean;
+  newWorkspaceName: string;
+  editingWorkspaceId: string | null;
+  editingWorkspaceNameValue: string;
+  workspaceMenuOpenId: string | null;
 }
 
 function initialState(): AppState {
@@ -67,6 +75,7 @@ function initialState(): AppState {
     creatingBoard: false,
     newBoardName: "",
     newBoardTemplate: "todo3",
+    newBoardWorkspaceId: "",
     inviteName: "",
     inviteEmail: "",
     theme: "system",
@@ -75,6 +84,12 @@ function initialState(): AppState {
     boardInfoOpenId: null,
     editingBoardId: null,
     editingBoardNameValue: "",
+    collapsedWorkspaceIds: [],
+    creatingWorkspace: false,
+    newWorkspaceName: "",
+    editingWorkspaceId: null,
+    editingWorkspaceNameValue: "",
+    workspaceMenuOpenId: null,
   };
 }
 
@@ -110,6 +125,7 @@ export default function TrelloApp() {
 
   const queryClient = useQueryClient();
   const boardsQuery = useQuery({ queryKey: ["boards"], queryFn: api.fetchBoards, refetchInterval: 3000 });
+  const workspacesQuery = useQuery({ queryKey: ["workspaces"], queryFn: api.fetchWorkspaces });
 
   function update(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)) {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
@@ -164,6 +180,27 @@ export default function TrelloApp() {
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["boards"], context.previous);
+    },
+  });
+
+  const createWorkspaceMutation = useMutation({
+    mutationFn: api.createWorkspace,
+    onSuccess: (workspace) => {
+      queryClient.setQueryData<WorkspaceData[]>(["workspaces"], (old) => [...(old ?? []), workspace]);
+    },
+  });
+
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: (vars: { workspaceId: string; name: string }) => api.updateWorkspace(vars.workspaceId, { name: vars.name }),
+    onSuccess: (workspace) => {
+      queryClient.setQueryData<WorkspaceData[]>(["workspaces"], (old) => old?.map((w) => (w.id === workspace.id ? workspace : w)));
+    },
+  });
+
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: (workspaceId: string) => api.deleteWorkspace(workspaceId),
+    onSuccess: (_data, workspaceId) => {
+      queryClient.setQueryData<WorkspaceData[]>(["workspaces"], (old) => old?.filter((w) => w.id !== workspaceId));
     },
   });
 
@@ -248,14 +285,17 @@ export default function TrelloApp() {
     );
   }
 
-  if (!boardsQuery.data) {
+  if (!boardsQuery.data || !workspacesQuery.data) {
     return (
       <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: theme.bgApp, color: theme.text }}>
-        {boardsQuery.isError ? (
+        {boardsQuery.isError || workspacesQuery.isError ? (
           <>
             <div style={{ fontSize: 14, fontWeight: 600 }}>Couldn&apos;t load boards. Is MongoDB running?</div>
             <button
-              onClick={() => boardsQuery.refetch()}
+              onClick={() => {
+                boardsQuery.refetch();
+                workspacesQuery.refetch();
+              }}
               style={{ padding: "8px 16px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
             >
               Retry
@@ -269,6 +309,7 @@ export default function TrelloApp() {
   }
 
   const boards = boardsQuery.data;
+  const workspaces = workspacesQuery.data;
 
   const goToDashboard = () => update({ view: "dashboard", selectedCardId: null });
   const openBoard = (boardId: string) => update({ view: "board", activeBoardId: boardId });
@@ -309,7 +350,8 @@ export default function TrelloApp() {
     updateBoardMutation.mutate({ boardId, patch: { memberIds } });
   };
 
-  const openCreateBoard = () => update({ creatingBoard: true, newBoardName: "", newBoardTemplate: "todo3" });
+  const openCreateBoard = (workspaceId?: string) =>
+    update({ creatingBoard: true, newBoardName: "", newBoardTemplate: "todo3", newBoardWorkspaceId: workspaceId ?? workspaces[0]?.id ?? "" });
   const cancelCreateBoard = () => update({ creatingBoard: false });
 
   const toggleBoardMenu = (boardId: string) => update((s) => ({ boardMenuOpenId: s.boardMenuOpenId === boardId ? null : boardId }));
@@ -349,8 +391,49 @@ export default function TrelloApp() {
     const name = state.newBoardName.trim() || "New Board";
     const templateId = state.newBoardTemplate;
     const memberIds = state.currentUserId ? [state.currentUserId] : [];
+    const workspaceId = state.newBoardWorkspaceId || workspaces[0]?.id || "";
     update({ creatingBoard: false });
-    createBoardMutation.mutate({ name, templateId, memberIds });
+    createBoardMutation.mutate({ name, templateId, memberIds, workspaceId });
+  };
+
+  const toggleWorkspaceCollapse = (workspaceId: string) =>
+    update((s) => ({
+      collapsedWorkspaceIds: s.collapsedWorkspaceIds.includes(workspaceId)
+        ? s.collapsedWorkspaceIds.filter((id) => id !== workspaceId)
+        : [...s.collapsedWorkspaceIds, workspaceId],
+    }));
+
+  const openCreateWorkspace = () => update({ creatingWorkspace: true, newWorkspaceName: "" });
+  const cancelCreateWorkspace = () => update({ creatingWorkspace: false });
+  const confirmCreateWorkspace = () => {
+    const name = state.newWorkspaceName.trim();
+    update({ creatingWorkspace: false });
+    if (!name) return;
+    createWorkspaceMutation.mutate({ name });
+  };
+
+  const toggleWorkspaceMenu = (workspaceId: string) => update((s) => ({ workspaceMenuOpenId: s.workspaceMenuOpenId === workspaceId ? null : workspaceId }));
+  const closeWorkspaceMenu = () => update({ workspaceMenuOpenId: null });
+
+  const startEditWorkspaceName = (workspaceId: string, currentName: string) =>
+    update({ editingWorkspaceId: workspaceId, editingWorkspaceNameValue: currentName, workspaceMenuOpenId: null });
+  const cancelEditWorkspaceName = () => update({ editingWorkspaceId: null, editingWorkspaceNameValue: "" });
+  const confirmEditWorkspaceName = () => {
+    const workspaceId = state.editingWorkspaceId;
+    const name = state.editingWorkspaceNameValue.trim();
+    update({ editingWorkspaceId: null, editingWorkspaceNameValue: "" });
+    if (!workspaceId || !name) return;
+    updateWorkspaceMutation.mutate({ workspaceId, name });
+  };
+
+  const deleteWorkspace = (workspaceId: string) => {
+    update({ workspaceMenuOpenId: null });
+    if (boards.some((b) => b.workspaceId === workspaceId)) {
+      window.alert("Move or delete its boards first.");
+      return;
+    }
+    if (!window.confirm("Delete this workspace? This can't be undone.")) return;
+    deleteWorkspaceMutation.mutate(workspaceId);
   };
 
   const openCard = (cardId: string, listId: string) => update({ selectedCardId: cardId, selectedListId: listId, labelPickerOpen: false, memberPickerOpen: false });
@@ -508,6 +591,7 @@ export default function TrelloApp() {
           sidebarOpen={state.sidebarOpen}
           onToggleSidebar={toggleSidebar}
           boards={visibleBoards}
+          workspaces={workspaces}
           activeBoardId={state.activeBoardId}
           view={state.view}
           isAdmin={isAdmin}
@@ -515,6 +599,19 @@ export default function TrelloApp() {
           onGoToAdmin={goToAdmin}
           onOpenBoard={openBoard}
           onOpenCreateBoard={openCreateBoard}
+          collapsedWorkspaceIds={state.collapsedWorkspaceIds}
+          onToggleWorkspaceCollapse={toggleWorkspaceCollapse}
+          onOpenCreateWorkspace={openCreateWorkspace}
+          workspaceMenuOpenId={state.workspaceMenuOpenId}
+          onToggleWorkspaceMenu={toggleWorkspaceMenu}
+          onCloseWorkspaceMenu={closeWorkspaceMenu}
+          editingWorkspaceId={state.editingWorkspaceId}
+          editingWorkspaceNameValue={state.editingWorkspaceNameValue}
+          onStartEditWorkspaceName={startEditWorkspaceName}
+          onEditingWorkspaceNameChange={(value) => update({ editingWorkspaceNameValue: value })}
+          onConfirmEditWorkspaceName={confirmEditWorkspaceName}
+          onCancelEditWorkspaceName={cancelEditWorkspaceName}
+          onDeleteWorkspace={deleteWorkspace}
         />
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -551,6 +648,7 @@ export default function TrelloApp() {
             <DashboardView
               theme={theme}
               boards={visibleBoards}
+              workspaces={workspaces}
               roster={state.roster}
               isAdmin={isAdmin}
               onOpenBoard={openBoard}
@@ -569,6 +667,17 @@ export default function TrelloApp() {
               onCancelEditBoardName={cancelEditBoardName}
               onToggleLockBoard={toggleLockBoard}
               onDeleteBoard={deleteBoard}
+              onOpenCreateWorkspace={openCreateWorkspace}
+              workspaceMenuOpenId={state.workspaceMenuOpenId}
+              onToggleWorkspaceMenu={toggleWorkspaceMenu}
+              onCloseWorkspaceMenu={closeWorkspaceMenu}
+              editingWorkspaceId={state.editingWorkspaceId}
+              editingWorkspaceNameValue={state.editingWorkspaceNameValue}
+              onStartEditWorkspaceName={startEditWorkspaceName}
+              onEditingWorkspaceNameChange={(value) => update({ editingWorkspaceNameValue: value })}
+              onConfirmEditWorkspaceName={confirmEditWorkspaceName}
+              onCancelEditWorkspaceName={cancelEditWorkspaceName}
+              onDeleteWorkspace={deleteWorkspace}
             />
           )}
 
@@ -629,8 +738,21 @@ export default function TrelloApp() {
           onNameChange={(value) => update({ newBoardName: value })}
           selectedTemplateId={state.newBoardTemplate}
           onSelectTemplate={(templateId) => update({ newBoardTemplate: templateId })}
+          workspaces={workspaces}
+          selectedWorkspaceId={state.newBoardWorkspaceId}
+          onSelectWorkspace={(workspaceId) => update({ newBoardWorkspaceId: workspaceId })}
           onCancel={cancelCreateBoard}
           onCreate={createBoard}
+        />
+      )}
+
+      {state.creatingWorkspace && (
+        <CreateWorkspaceModal
+          theme={theme}
+          newWorkspaceName={state.newWorkspaceName}
+          onNameChange={(value) => update({ newWorkspaceName: value })}
+          onCancel={cancelCreateWorkspace}
+          onCreate={confirmCreateWorkspace}
         />
       )}
 

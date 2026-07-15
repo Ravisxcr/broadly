@@ -1,4 +1,4 @@
-import type { BoardData, CardData, Member } from "./types";
+import type { BoardData, CardData, Member, WorkspaceData } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -20,8 +20,24 @@ export function fetchMembers(): Promise<Member[]> {
   return request<Member[]>("/api/members");
 }
 
-export function createBoard(input: { name: string; templateId: string; memberIds: string[] }): Promise<BoardData> {
+export function createBoard(input: { name: string; templateId: string; memberIds: string[]; workspaceId: string }): Promise<BoardData> {
   return request<BoardData>("/api/boards", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function fetchWorkspaces(): Promise<WorkspaceData[]> {
+  return request<WorkspaceData[]>("/api/workspaces");
+}
+
+export function createWorkspace(input: { name: string }): Promise<WorkspaceData> {
+  return request<WorkspaceData>("/api/workspaces", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateWorkspace(workspaceId: string, patch: { name: string }): Promise<WorkspaceData> {
+  return request<WorkspaceData>(`/api/workspaces/${workspaceId}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export function deleteWorkspace(workspaceId: string): Promise<{ ok: true }> {
+  return request<{ ok: true }>(`/api/workspaces/${workspaceId}`, { method: "DELETE" });
 }
 
 export function updateBoard(boardId: string, patch: Partial<Pick<BoardData, "name" | "locked" | "memberIds">>): Promise<BoardData> {

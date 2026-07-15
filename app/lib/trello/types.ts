@@ -54,6 +54,13 @@ export interface BoardData {
   memberIds: string[];
   lists: ListData[];
   locked?: boolean;
+  workspaceId: string;
+}
+
+export interface WorkspaceData {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface BoardTemplate {

@@ -1,4 +1,4 @@
-import type { BoardData, BoardTemplate, CardData, Label, Member, ThemeColors } from "./types";
+import type { BoardData, BoardTemplate, CardData, Label, Member, ThemeColors, WorkspaceData } from "./types";
 
 export const LABEL_PALETTE: Label[] = [
   { id: "l1", color: "#22C55E", name: "Green" },
@@ -19,6 +19,14 @@ export const DEFAULT_ROSTER: Member[] = [
 export const AVATAR_COLORS = ["#4F46E5", "#EA580C", "#16A34A", "#9333EA", "#0891B2", "#DB2777"];
 
 export const BOARD_COVERS = ["#3B82F6", "#EA580C", "#9333EA", "#16A34A", "#475569", "#E11D48"];
+
+export const WORKSPACE_COLORS = ["#4F46E5", "#0891B2", "#16A34A", "#DB2777", "#EA580C", "#475569"];
+
+export const DEFAULT_WORKSPACES: WorkspaceData[] = [{ id: "w1", name: "Boardly Studio", color: "#4F46E5" }];
+
+export function groupByWorkspace(boards: BoardData[], workspaces: WorkspaceData[]): { workspace: WorkspaceData; boards: BoardData[] }[] {
+  return workspaces.map((workspace) => ({ workspace, boards: boards.filter((b) => b.workspaceId === workspace.id) }));
+}
 
 export const COLUMN_TEMPLATES: BoardTemplate[] = [
   { id: "todo3", name: "To Do / Doing / Done", desc: "Simple 3-column flow for most projects.", lists: ["To Do", "Doing", "Done"] },
@@ -54,6 +62,7 @@ export function initialBoards(): BoardData[] {
       id: "b1",
       name: "Product Launch",
       cover: "#3B82F6",
+      workspaceId: "w1",
       memberIds: ["u1", "u2", "u3"],
       lists: [
         {
@@ -112,6 +121,7 @@ export function initialBoards(): BoardData[] {
       id: "b2",
       name: "Marketing Sprint",
       cover: "#EA580C",
+      workspaceId: "w1",
       memberIds: ["u1", "u2"],
       lists: [
         { id: "l1", title: "Ideas", cards: [card("c8", "Launch teaser video concept", { labelIds: ["l5"] })] },
@@ -123,6 +133,7 @@ export function initialBoards(): BoardData[] {
       id: "b3",
       name: "Design System",
       cover: "#9333EA",
+      workspaceId: "w1",
       memberIds: ["u1", "u4"],
       lists: [
         { id: "l1", title: "To Do", cards: [card("c10", "Audit color tokens", { labelIds: ["l6"] })] },

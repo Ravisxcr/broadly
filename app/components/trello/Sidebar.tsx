@@ -1,19 +1,35 @@
 "use client";
 
-import type { BoardData, ThemeColors, ViewName } from "../../lib/trello/types";
+import type { MouseEvent } from "react";
+import { groupByWorkspace } from "../../lib/trello/data";
+import type { BoardData, ThemeColors, ViewName, WorkspaceData } from "../../lib/trello/types";
 
 interface SidebarProps {
   theme: ThemeColors;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   boards: BoardData[];
+  workspaces: WorkspaceData[];
   activeBoardId: string | null;
   view: ViewName;
   isAdmin: boolean;
   onGoToDashboard: () => void;
   onGoToAdmin: () => void;
   onOpenBoard: (boardId: string) => void;
-  onOpenCreateBoard: () => void;
+  onOpenCreateBoard: (workspaceId?: string) => void;
+  collapsedWorkspaceIds: string[];
+  onToggleWorkspaceCollapse: (workspaceId: string) => void;
+  onOpenCreateWorkspace: () => void;
+  workspaceMenuOpenId: string | null;
+  onToggleWorkspaceMenu: (workspaceId: string) => void;
+  onCloseWorkspaceMenu: () => void;
+  editingWorkspaceId: string | null;
+  editingWorkspaceNameValue: string;
+  onStartEditWorkspaceName: (workspaceId: string, currentName: string) => void;
+  onEditingWorkspaceNameChange: (value: string) => void;
+  onConfirmEditWorkspaceName: () => void;
+  onCancelEditWorkspaceName: () => void;
+  onDeleteWorkspace: (workspaceId: string) => void;
 }
 
 export default function Sidebar({
@@ -21,6 +37,7 @@ export default function Sidebar({
   sidebarOpen,
   onToggleSidebar,
   boards,
+  workspaces,
   activeBoardId,
   view,
   isAdmin,
@@ -28,7 +45,22 @@ export default function Sidebar({
   onGoToAdmin,
   onOpenBoard,
   onOpenCreateBoard,
+  collapsedWorkspaceIds,
+  onToggleWorkspaceCollapse,
+  onOpenCreateWorkspace,
+  workspaceMenuOpenId,
+  onToggleWorkspaceMenu,
+  onCloseWorkspaceMenu,
+  editingWorkspaceId,
+  editingWorkspaceNameValue,
+  onStartEditWorkspaceName,
+  onEditingWorkspaceNameChange,
+  onConfirmEditWorkspaceName,
+  onCancelEditWorkspaceName,
+  onDeleteWorkspace,
 }: SidebarProps) {
+  const stopProp = (e: MouseEvent) => e.stopPropagation();
+
   return (
     <div
       style={{
@@ -124,15 +156,114 @@ export default function Sidebar({
             {sidebarOpen && "Admin panel"}
           </div>
         )}
-        {sidebarOpen && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", padding: "14px 10px 6px" }}>Workspace</div>
-        )}
 
-        {boards.map((b) => (
+        {groupByWorkspace(boards, workspaces).map(({ workspace, boards: workspaceBoards }) => {
+          const collapsed = sidebarOpen && collapsedWorkspaceIds.includes(workspace.id);
+          const isEditingName = editingWorkspaceId === workspace.id;
+          const isMenuOpen = workspaceMenuOpenId === workspace.id;
+
+          return (
+            <div key={workspace.id}>
+              {sidebarOpen && (
+                <div
+                  onClick={() => !isEditingName && onToggleWorkspaceCollapse(workspace.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "14px 4px 6px", cursor: isEditingName ? "default" : "pointer", position: "relative" }}
+                >
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: workspace.color, flexShrink: 0 }} />
+                  {isEditingName ? (
+                    <input
+                      autoFocus
+                      onClick={stopProp}
+                      value={editingWorkspaceNameValue}
+                      onChange={(e) => onEditingWorkspaceNameChange(e.target.value)}
+                      onBlur={onConfirmEditWorkspaceName}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") onConfirmEditWorkspaceName();
+                        if (e.key === "Escape") onCancelEditWorkspaceName();
+                      }}
+                      style={{ flex: 1, fontSize: 11, fontWeight: 700, border: `1px solid ${theme.border}`, borderRadius: 5, padding: "2px 5px", fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
+                    />
+                  ) : (
+                    <span style={{ flex: 1, fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {workspace.name}
+                    </span>
+                  )}
+                  {!isEditingName && <span style={{ fontSize: 9, color: theme.textSecondary, flexShrink: 0 }}>{collapsed ? "▸" : "▾"}</span>}
+                  {!isEditingName && (
+                    <button
+                      onClick={(e) => {
+                        stopProp(e);
+                        onOpenCreateBoard(workspace.id);
+                      }}
+                      title="Add board"
+                      style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontSize: 13, fontFamily: "inherit", flexShrink: 0 }}
+                    >
+                      +
+                    </button>
+                  )}
+                  {isAdmin && !isEditingName && (
+                    <div onClick={stopProp} style={{ position: "relative", flexShrink: 0 }}>
+                      <button
+                        onClick={() => onToggleWorkspaceMenu(workspace.id)}
+                        title="Workspace options"
+                        style={{ width: 20, height: 20, border: "none", background: "transparent", borderRadius: 5, cursor: "pointer", color: theme.textSecondary, fontSize: 12, fontFamily: "inherit" }}
+                      >
+                        ⋯
+                      </button>
+                      {isMenuOpen && (
+                        <>
+                          <div onClick={onCloseWorkspaceMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+                          <div style={{ position: "absolute", top: 22, right: 0, width: 160, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 6 }}>
+                            <div onClick={() => onStartEditWorkspaceName(workspace.id, workspace.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                              Rename workspace
+                            </div>
+                            <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
+                            <div onClick={() => onDeleteWorkspace(workspace.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                              Delete workspace
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!collapsed &&
+                workspaceBoards.map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => onOpenBoard(b.id)}
+                    title={b.name}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: sidebarOpen ? "8px 10px" : 6,
+                      borderRadius: 7,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      background: b.id === activeBoardId && view === "board" ? "#F4F3F0" : "transparent",
+                    }}
+                  >
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: b.cover, flexShrink: 0 }} />
+                    {sidebarOpen && (
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {b.name}
+                        {b.locked && <span style={{ marginLeft: 5, fontSize: 11 }}>🔒</span>}
+                      </span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          );
+        })}
+
+        {isAdmin && (
           <div
-            key={b.id}
-            onClick={() => onOpenBoard(b.id)}
-            title={b.name}
+            onClick={onOpenCreateWorkspace}
+            title="New workspace"
             style={{
               display: "flex",
               alignItems: "center",
@@ -142,38 +273,14 @@ export default function Sidebar({
               cursor: "pointer",
               fontSize: 13,
               fontWeight: 600,
-              background: b.id === activeBoardId && view === "board" ? "#F4F3F0" : "transparent",
+              color: "#4F46E5",
+              marginTop: sidebarOpen ? 10 : 4,
             }}
           >
-            <div style={{ width: 16, height: 16, borderRadius: 4, background: b.cover, flexShrink: 0 }} />
-            {sidebarOpen && (
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {b.name}
-                {b.locked && <span style={{ marginLeft: 5, fontSize: 11 }}>🔒</span>}
-              </span>
-            )}
+            <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px dashed #4F46E5", flexShrink: 0 }} />
+            {sidebarOpen && "New workspace"}
           </div>
-        ))}
-
-        <div
-          onClick={onOpenCreateBoard}
-          title="New board"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: sidebarOpen ? "8px 10px" : 6,
-            borderRadius: 7,
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#4F46E5",
-            marginTop: sidebarOpen ? 4 : 0,
-          }}
-        >
-          <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px dashed #4F46E5", flexShrink: 0 }} />
-          {sidebarOpen && "New board"}
-        </div>
+        )}
       </div>
     </div>
   );
