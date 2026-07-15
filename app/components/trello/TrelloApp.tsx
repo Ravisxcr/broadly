@@ -577,6 +577,15 @@ export default function TrelloApp() {
     scheduleCardPatch(boardId, cardId, { desc: value });
   };
 
+  const onCardDueChange = (value: string) => {
+    const boardId = state.activeBoardId;
+    const cardId = state.selectedCardId;
+    if (!boardId || !cardId) return;
+    const due = value || null;
+    patchCardInCache(queryClient, boardId, cardId, { due });
+    scheduleCardPatch(boardId, cardId, { due });
+  };
+
   const addComment = () => {
     const text = state.newComment.trim();
     const boardId = state.activeBoardId;
@@ -802,6 +811,7 @@ export default function TrelloApp() {
           onClose={closeModal}
           onTitleChange={onCardTitleChange}
           onDescChange={onCardDescChange}
+          onDueChange={onCardDueChange}
           onToggleLabelPicker={toggleLabelPicker}
           onToggleMemberPicker={toggleMemberPicker}
           onToggleLabel={toggleLabelOnCard}

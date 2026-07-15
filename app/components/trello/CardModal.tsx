@@ -16,6 +16,7 @@ interface CardModalProps {
   onClose: () => void;
   onTitleChange: (value: string) => void;
   onDescChange: (value: string) => void;
+  onDueChange: (value: string) => void;
   onToggleLabelPicker: () => void;
   onToggleMemberPicker: () => void;
   onToggleLabel: (labelId: string) => void;
@@ -37,6 +38,7 @@ export default function CardModal({
   onClose,
   onTitleChange,
   onDescChange,
+  onDueChange,
   onToggleLabelPicker,
   onToggleMemberPicker,
   onToggleLabel,
@@ -52,151 +54,163 @@ export default function CardModal({
   const done = card.checklist.filter((i) => i.done).length;
   const total = card.checklist.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
+  const dueValue = card.due && /^\d{4}-\d{2}-\d{2}$/.test(card.due) ? card.due : "";
+  const sectionLabelStyle = { fontSize: 10.5, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 6 };
 
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(20,20,25,0.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "48px 20px", overflowY: "auto", zIndex: 50 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(20,20,25,0.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "36px 20px", overflowY: "auto", zIndex: 50 }}
     >
-      <div onClick={stopProp} style={{ width: 640, maxWidth: "100%", background: theme.panelBg, color: theme.text, borderRadius: 12, overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}>
+      <div onClick={stopProp} style={{ width: 600, maxWidth: "100%", background: theme.panelBg, color: theme.text, borderRadius: 12, overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}>
         {locked && (
-          <div style={{ margin: "16px 24px 0", padding: "8px 12px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ margin: "12px 20px 0", padding: "7px 12px", fontSize: 12, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7, display: "flex", alignItems: "center", gap: 6 }}>
             <Lock size={13} /> This board is locked — card editing is disabled.
           </div>
         )}
-        <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "16px 20px 0", display: "flex", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>in list {listTitle}</div>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>in list {listTitle}</div>
             <textarea
               value={card.title}
               onChange={(e) => onTitleChange(e.target.value)}
               readOnly={locked}
-              style={{ width: "100%", fontSize: 19, fontWeight: 800, border: "none", resize: "none", fontFamily: "inherit", padding: "2px 4px", borderRadius: 6, background: "transparent", color: theme.text }}
+              rows={1}
+              style={{ width: "100%", fontSize: 17, fontWeight: 800, border: "none", resize: "none", fontFamily: "inherit", padding: "2px 4px", borderRadius: 6, background: "transparent", color: theme.text }}
             />
           </div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 28, height: 28, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <X size={15} />
           </button>
         </div>
 
-        <div style={{ padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* labels */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Labels</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              {labels.map((lab) => (
-                <div key={lab.id} style={{ padding: "5px 10px", borderRadius: 5, background: lab.color, color: "#fff", fontSize: 11.5, fontWeight: 700 }}>
-                  {lab.name}
-                </div>
-              ))}
-              {!locked && (
-                <button
-                  onClick={onToggleLabelPicker}
-                  style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  <Plus size={13} />
-                </button>
-              )}
-            </div>
-            {!locked && labelPickerOpen && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, padding: 10, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
-                {LABEL_PALETTE.map((lc) => {
-                  const active = labels.some((sl) => sl.id === lc.id);
-                  return (
-                    <div
-                      key={lc.id}
-                      onClick={() => onToggleLabel(lc.id)}
-                      style={{ padding: "5px 10px", borderRadius: 5, background: lc.color, color: "#fff", fontSize: 11.5, fontWeight: 700, cursor: "pointer", opacity: active ? 1 : 0.35 }}
-                    >
-                      {lc.name}
-                    </div>
-                  );
-                })}
+        <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* labels + members + due date */}
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+            {/* labels */}
+            <div style={{ flex: "1 1 160px" }}>
+              <div style={sectionLabelStyle}>Labels</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {labels.map((lab) => (
+                  <div key={lab.id} style={{ padding: "4px 9px", borderRadius: 5, background: lab.color, color: "#fff", fontSize: 11, fontWeight: 700 }}>
+                    {lab.name}
+                  </div>
+                ))}
+                {!locked && (
+                  <button
+                    onClick={onToggleLabelPicker}
+                    style={{ width: 24, height: 24, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    {labelPickerOpen ? <X size={12} /> : <Plus size={12} />}
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* members */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Members</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              {members.map((m) => (
-                <div
-                  key={m.id}
-                  style={{ width: 30, height: 30, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  {m.initials}
-                </div>
-              ))}
-              {!locked && (
-                <button
-                  onClick={onToggleMemberPicker}
-                  style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  <Plus size={14} />
-                </button>
-              )}
-            </div>
-            {!locked && memberPickerOpen && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, padding: 10, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
-                {roster.map((mc) => {
-                  const active = members.some((sm) => sm.id === mc.id);
-                  return (
-                    <div
-                      key={mc.id}
-                      onClick={() => onToggleMember(mc.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px 5px 5px", borderRadius: 20, background: theme.panelBg, border: `1px solid ${theme.border}`, cursor: "pointer", opacity: active ? 1 : 0.4 }}
-                    >
-                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: mc.color, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {mc.initials}
+              {!locked && labelPickerOpen && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6, padding: 8, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
+                  {LABEL_PALETTE.map((lc) => {
+                    const active = labels.some((sl) => sl.id === lc.id);
+                    return (
+                      <div
+                        key={lc.id}
+                        onClick={() => onToggleLabel(lc.id)}
+                        style={{ padding: "4px 9px", borderRadius: 5, background: lc.color, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", opacity: active ? 1 : 0.35 }}
+                      >
+                        {lc.name}
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>{mc.name}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-          {/* due date */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Due date</div>
-            <div style={{ fontSize: 13, fontWeight: 600, background: theme.subtleBg, display: "inline-block", padding: "7px 12px", borderRadius: 7 }}>{card.due || "No due date"}</div>
+            {/* members */}
+            <div style={{ flex: "1 1 160px" }}>
+              <div style={sectionLabelStyle}>Members</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {members.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{ width: 26, height: 26, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    {m.initials}
+                  </div>
+                ))}
+                {!locked && (
+                  <button
+                    onClick={onToggleMemberPicker}
+                    style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: "50%", cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    {memberPickerOpen ? <X size={13} /> : <Plus size={13} />}
+                  </button>
+                )}
+              </div>
+              {!locked && memberPickerOpen && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6, padding: 8, background: theme.subtleBg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
+                  {roster.map((mc) => {
+                    const active = members.some((sm) => sm.id === mc.id);
+                    return (
+                      <div
+                        key={mc.id}
+                        onClick={() => onToggleMember(mc.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 9px 4px 4px", borderRadius: 20, background: theme.panelBg, border: `1px solid ${theme.border}`, cursor: "pointer", opacity: active ? 1 : 0.4 }}
+                      >
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: mc.color, color: "#fff", fontSize: 8.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {mc.initials}
+                        </div>
+                        <div style={{ fontSize: 11.5, fontWeight: 600 }}>{mc.name}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* due date */}
+            <div style={{ flex: "1 1 140px" }}>
+              <div style={sectionLabelStyle}>Due date</div>
+              <input
+                type="date"
+                value={dueValue}
+                onChange={(e) => onDueChange(e.target.value)}
+                disabled={locked}
+                style={{ fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, border: `1px solid ${theme.border}`, padding: "6px 10px", borderRadius: 7, fontFamily: "inherit", color: theme.text }}
+              />
+            </div>
           </div>
 
           {/* description */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Description</div>
+            <div style={sectionLabelStyle}>Description</div>
             <textarea
               value={card.desc}
               onChange={(e) => onDescChange(e.target.value)}
               readOnly={locked}
               placeholder="Add a more detailed description…"
-              style={{ width: "100%", minHeight: 70, padding: "10px 12px", border: `1px solid ${theme.border}`, borderRadius: 8, fontFamily: "inherit", fontSize: 13.5, resize: "vertical", lineHeight: 1.5, background: theme.inputBg, color: theme.text }}
+              style={{ width: "100%", minHeight: 56, padding: "8px 10px", border: `1px solid ${theme.border}`, borderRadius: 8, fontFamily: "inherit", fontSize: 13, resize: "vertical", lineHeight: 1.45, background: theme.inputBg, color: theme.text }}
             />
           </div>
 
           {/* checklist */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em" }}>Checklist</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={sectionLabelStyle}>Checklist</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: theme.textSecondary }}>
                 {done}/{total}
               </div>
             </div>
-            <div style={{ height: 6, background: theme.subtleBg, borderRadius: 3, marginBottom: 10, overflow: "hidden" }}>
+            <div style={{ height: 5, background: theme.subtleBg, borderRadius: 3, marginBottom: 8, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${pct}%`, background: "#4F46E5", borderRadius: 3 }} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {card.checklist.map((item, i) => (
-                <div key={i} onClick={() => !locked && onToggleChecklistItem(i)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 6px", borderRadius: 6, cursor: locked ? "default" : "pointer" }}>
+                <div key={i} onClick={() => !locked && onToggleChecklistItem(i)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 6, cursor: locked ? "default" : "pointer" }}>
                   <div
                     style={{
-                      width: 16,
-                      height: 16,
+                      width: 15,
+                      height: 15,
                       borderRadius: 4,
                       border: `1.5px solid ${item.done ? "#4F46E5" : "#D8D4CB"}`,
                       background: item.done ? "#4F46E5" : "#fff",
@@ -207,9 +221,9 @@ export default function CardModal({
                       color: "#fff",
                     }}
                   >
-                    {item.done && <Check size={11} />}
+                    {item.done && <Check size={10} />}
                   </div>
-                  <div style={{ fontSize: 13, color: item.done ? "#B3AFA6" : theme.text, textDecoration: item.done ? "line-through" : "none" }}>{item.text}</div>
+                  <div style={{ fontSize: 12.5, color: item.done ? "#B3AFA6" : theme.text, textDecoration: item.done ? "line-through" : "none" }}>{item.text}</div>
                 </div>
               ))}
             </div>
@@ -217,9 +231,9 @@ export default function CardModal({
 
           {/* comments */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#B3AFA6", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Comments</div>
+            <div style={sectionLabelStyle}>Comments</div>
             {!locked && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <input
                   value={newComment}
                   onChange={(e) => onNewCommentChange(e.target.value)}
