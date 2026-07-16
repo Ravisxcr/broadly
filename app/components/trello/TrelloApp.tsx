@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import * as api from "../../lib/trello/api";
 import { AVATAR_COLORS, DEFAULT_ROSTER, getThemeColors } from "../../lib/trello/data";
-import type { BoardData, CardData, Member, ThemeMode, ViewName, WorkspaceData } from "../../lib/trello/types";
+import { buildUrl, parseUrlTarget } from "../../lib/trello/url";
+import type { BoardData, CardData, Member, Role, ThemeMode, ViewName, WorkspaceData } from "../../lib/trello/types";
 import LoginView from "./LoginView";
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
@@ -56,11 +58,19 @@ interface AppState {
   workspaceMenuSource: "sidebar" | "dashboard" | null;
 }
 
+const SESSION_STORAGE_KEY = "boardly:currentUserId";
+
+function readStoredUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+}
+
 function initialState(): AppState {
+  const storedUserId = readStoredUserId();
   return {
-    view: "login",
+    view: storedUserId ? "dashboard" : "login",
     roster: DEFAULT_ROSTER.map((m) => ({ ...m })),
-    currentUserId: null,
+    currentUserId: storedUserId,
     activeBoardId: null,
     selectedCardId: null,
     selectedListId: null,
@@ -109,6 +119,20 @@ function findCard(boards: BoardData[], boardId: string, cardId: string): CardDat
   return null;
 }
 
+function findCardListId(boards: BoardData[], boardId: string, cardId: string): string | null {
+  const board = boards.find((b) => b.id === boardId);
+  if (!board) return null;
+  const list = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
+  return list?.id ?? null;
+}
+
+function canAccessBoard(board: BoardData, workspaces: WorkspaceData[], userId: string, isAdmin: boolean): boolean {
+  if (isAdmin) return true;
+  if (board.memberIds.includes(userId)) return true;
+  const workspace = workspaces.find((w) => w.id === board.workspaceId);
+  return !!workspace?.memberIds.includes(userId);
+}
+
 function replaceBoardInCache(queryClient: QueryClient, board: BoardData) {
   queryClient.setQueryData<BoardData[]>(["boards"], (old) => old?.map((b) => (b.id === board.id ? board : b)));
 }
@@ -128,13 +152,27 @@ export default function TrelloApp() {
   const draggingCardId = useRef<string | null>(null);
   const draggingSourceListId = useRef<string | null>(null);
   const cardPatchTimers = useRef<Record<string, { boardId: string; patch: Partial<Omit<CardData, "id">>; timer: ReturnType<typeof setTimeout> }>>({});
+  const skipUrlSyncRef = useRef(false);
 
   const queryClient = useQueryClient();
   const boardsQuery = useQuery({ queryKey: ["boards"], queryFn: api.fetchBoards, refetchInterval: 3000 });
   const workspacesQuery = useQuery({ queryKey: ["workspaces"], queryFn: api.fetchWorkspaces });
 
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   function update(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)) {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
+  }
+
+  // Handlers pair a state update with this so the URL mirrors the click immediately;
+  // the sync effect below skips the run it provokes and only reconciles state from
+  // the URL for navigations it didn't cause itself (back/forward, direct links, initial load).
+  function navigate(url: string, replace = false) {
+    skipUrlSyncRef.current = true;
+    if (replace) router.replace(url);
+    else router.push(url);
   }
 
   const [systemPrefersDark, setSystemPrefersDark] = useState(
@@ -148,6 +186,58 @@ export default function TrelloApp() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // Reconciles state with the URL for navigations we didn't drive ourselves
+  // (initial load / deep link, browser back-forward, or a board/card that stopped
+  // being valid). Skips the run its own `navigate()` calls provoke — see above.
+  useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
+    const userId = state.currentUserId;
+    if (!userId) return;
+    const boardsData = boardsQuery.data;
+    const workspacesData = workspacesQuery.data;
+    if (!boardsData || !workspacesData) return;
+
+    const target = parseUrlTarget(pathname, searchParams);
+    const isAdminUser = state.roster.find((m) => m.id === userId)?.role === "admin";
+
+    if (target.view === "admin") {
+      if (!isAdminUser) {
+        router.replace(buildUrl("dashboard", null, null));
+        return;
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reconciling local state with an external system (browser URL/history), not deriving it from props
+      if (state.view !== "admin") update({ view: "admin" });
+      return;
+    }
+
+    if (target.view === "board" && target.boardId) {
+      const board = boardsData.find((b) => b.id === target.boardId);
+      if (!board || !canAccessBoard(board, workspacesData, userId, isAdminUser)) {
+        router.replace(buildUrl("dashboard", null, null));
+        return;
+      }
+      if (state.view !== "board" || state.activeBoardId !== target.boardId) {
+        update({ view: "board", activeBoardId: target.boardId, selectedCardId: null, selectedListId: null });
+        return;
+      }
+      if (target.cardId && target.cardId !== state.selectedCardId) {
+        const listId = findCardListId(boardsData, target.boardId, target.cardId);
+        if (listId) update({ selectedCardId: target.cardId, selectedListId: listId });
+        else router.replace(buildUrl("board", target.boardId, null));
+      } else if (!target.cardId && state.selectedCardId) {
+        update({ selectedCardId: null, selectedListId: null });
+      }
+      return;
+    }
+
+    if (state.view !== "dashboard" && state.view !== "login") {
+      update({ view: "dashboard", activeBoardId: null, selectedCardId: null, selectedListId: null });
+    }
+  }, [pathname, searchParams, boardsQuery.data, workspacesQuery.data, state.currentUserId, state.roster, state.view, state.activeBoardId, state.selectedCardId, router]);
+
   const theme = getThemeColors(state.theme === "system" ? systemPrefersDark : state.theme === "dark");
 
   // Mutations (declared unconditionally, ahead of the early returns below, per the
@@ -159,6 +249,7 @@ export default function TrelloApp() {
     onSuccess: (board) => {
       queryClient.setQueryData<BoardData[]>(["boards"], (old) => [...(old ?? []), board]);
       update({ view: "board", activeBoardId: board.id });
+      navigate(buildUrl("board", board.id, null));
     },
   });
 
@@ -282,13 +373,17 @@ export default function TrelloApp() {
     cardPatchTimers.current[cardId] = { boardId, patch: merged, timer };
   }
 
+  const loginAs = (userId: string, role: Role) => {
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, userId);
+    const target = parseUrlTarget(pathname, searchParams);
+    const nextView: ViewName = target.view === "admin" && role !== "admin" ? "dashboard" : target.view;
+    const nextBoardId = nextView === "board" ? target.boardId : null;
+    update({ view: nextView, currentUserId: userId, activeBoardId: nextBoardId, selectedCardId: null, selectedListId: null });
+    navigate(buildUrl(nextView, nextBoardId, null), true);
+  };
+
   if (state.view === "login") {
-    return (
-      <LoginView
-        onLoginAdmin={() => update({ view: "dashboard", currentUserId: "u1" })}
-        onLoginMember={() => update({ view: "dashboard", currentUserId: "u2" })}
-      />
-    );
+    return <LoginView onLoginAdmin={() => loginAs("u1", "admin")} onLoginMember={() => loginAs("u2", "member")} />;
   }
 
   if (!boardsQuery.data || !workspacesQuery.data) {
@@ -317,15 +412,28 @@ export default function TrelloApp() {
   const boards = boardsQuery.data;
   const workspaces = workspacesQuery.data;
 
-  const goToDashboard = () => update({ view: "dashboard", selectedCardId: null });
-  const openBoard = (boardId: string) => update({ view: "board", activeBoardId: boardId });
-  const goToAdmin = () => update({ view: "admin", profileMenuOpen: false });
+  const goToDashboard = () => {
+    update({ view: "dashboard", selectedCardId: null });
+    navigate(buildUrl("dashboard", null, null));
+  };
+  const openBoard = (boardId: string) => {
+    update({ view: "board", activeBoardId: boardId, selectedCardId: null });
+    navigate(buildUrl("board", boardId, null));
+  };
+  const goToAdmin = () => {
+    update({ view: "admin", profileMenuOpen: false });
+    navigate(buildUrl("admin", null, null));
+  };
   const toggleSidebar = () => update((s) => ({ sidebarOpen: !s.sidebarOpen }));
 
   const toggleProfileMenu = () => update((s) => ({ profileMenuOpen: !s.profileMenuOpen }));
   const closeProfileMenu = () => update({ profileMenuOpen: false });
   const setTheme = (theme: ThemeMode) => update({ theme });
-  const logout = () => update({ view: "login", currentUserId: null, profileMenuOpen: false });
+  const logout = () => {
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    update({ view: "login", currentUserId: null, profileMenuOpen: false });
+    navigate("/");
+  };
 
   const inviteMember = () => {
     const name = state.inviteName.trim();
@@ -395,11 +503,14 @@ export default function TrelloApp() {
 
   const deleteBoard = (boardId: string) => {
     if (!window.confirm("Delete this board? This can't be undone.")) return;
+    const wasActive = state.activeBoardId === boardId && state.view === "board";
     update((s) => ({
       activeBoardId: s.activeBoardId === boardId ? null : s.activeBoardId,
       view: s.activeBoardId === boardId && s.view === "board" ? "dashboard" : s.view,
+      selectedCardId: s.activeBoardId === boardId ? null : s.selectedCardId,
       boardMenuOpenId: null,
     }));
+    if (wasActive) navigate(buildUrl("dashboard", null, null));
     deleteBoardMutation.mutate(boardId);
   };
 
@@ -463,8 +574,14 @@ export default function TrelloApp() {
     deleteWorkspaceMutation.mutate(workspaceId);
   };
 
-  const openCard = (cardId: string, listId: string) => update({ selectedCardId: cardId, selectedListId: listId, labelPickerOpen: false, memberPickerOpen: false });
-  const closeModal = () => update({ selectedCardId: null, labelPickerOpen: false, memberPickerOpen: false });
+  const openCard = (cardId: string, listId: string) => {
+    update({ selectedCardId: cardId, selectedListId: listId, labelPickerOpen: false, memberPickerOpen: false });
+    if (state.activeBoardId) navigate(buildUrl("board", state.activeBoardId, cardId));
+  };
+  const closeModal = () => {
+    update({ selectedCardId: null, labelPickerOpen: false, memberPickerOpen: false });
+    if (state.activeBoardId) navigate(buildUrl("board", state.activeBoardId, null), true);
+  };
 
   const openAddList = () => update({ isAddingList: true, newListTitle: "" });
   const cancelAddList = () => update({ isAddingList: false, newListTitle: "" });
