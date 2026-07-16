@@ -1,9 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 
 export default function LoginView() {
-  const { login } = useAuth();
+  const { login, roster } = useAuth();
+  const [email, setEmail] = useState("ari@studio.com");
+  const [password, setPassword] = useState("password");
+  const [error, setError] = useState("");
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = roster.find((m) => m.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      setError("");
+      login(user.id);
+    } else {
+      setError("User not found.");
+    }
+  };
 
   return (
     <div style={{ width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FAFAF9" }}>
@@ -13,15 +28,16 @@ export default function LoginView() {
           <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>Boardly</div>
         </div>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Welcome back</div>
-        <div style={{ fontSize: 14, color: "#726F68", marginBottom: 28 }}>Choose a demo account to log in with.</div>
+        <div style={{ fontSize: 14, color: "#726F68", marginBottom: 28 }}>Log in with your demo account.</div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#726F68", marginBottom: 6 }}>Email</label>
             <input
               type="email"
-              value="ari@studio.com"
-              readOnly
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #E8E6E1", borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#FAFAF9", color: "#1F2430" }}
             />
           </div>
@@ -29,24 +45,20 @@ export default function LoginView() {
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#726F68", marginBottom: 6 }}>Password</label>
             <input
               type="password"
-              value="••••••••"
-              readOnly
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #E8E6E1", borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#FAFAF9", color: "#1F2430" }}
             />
           </div>
+          {error && <div style={{ fontSize: 12, color: "#EF4444" }}>{error}</div>}
           <button
-            onClick={() => login("u1")}
+            type="submit"
             style={{ marginTop: 8, width: "100%", padding: 11, background: "#4F46E5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
           >
-            Log in as Admin (Ari)
+            Log in
           </button>
-          <button
-            onClick={() => login("u2")}
-            style={{ width: "100%", padding: 11, background: "transparent", color: "#4F46E5", border: "1px solid #E8E6E1", borderRadius: 8, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}
-          >
-            Log in as Member (Jess)
-          </button>
-        </div>
+        </form>
       </div>
     </div>
   );
