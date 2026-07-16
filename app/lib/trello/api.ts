@@ -1,4 +1,4 @@
-import type { BoardData, CardData, Member, WorkspaceData } from "./types";
+import type { AuthUser, BoardData, CardData, WorkspaceData } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -16,8 +16,8 @@ export function fetchBoards(): Promise<BoardData[]> {
   return request<BoardData[]>("/api/boards");
 }
 
-export function fetchMembers(): Promise<Member[]> {
-  return request<Member[]>("/api/members");
+export function fetchMembers(): Promise<AuthUser[]> {
+  return request<AuthUser[]>("/api/members");
 }
 
 export function createBoard(input: { name: string; templateId: string; memberIds: string[]; workspaceId: string }): Promise<BoardData> {

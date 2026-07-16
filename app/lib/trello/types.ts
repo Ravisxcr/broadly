@@ -11,6 +11,14 @@ export interface Member {
   role: Role;
 }
 
+/** A registered account from the auth provider, as returned by GET /api/members. */
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+}
+
 export interface Label {
   id: string;
   color: string;

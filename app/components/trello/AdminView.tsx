@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { X } from "lucide-react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
@@ -9,18 +8,13 @@ import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, inviteMember, removeMember } = useAuth();
+  const { roster, availableUsers, addMember, removeMember } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
 
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-
-  const handleInviteMember = () => {
-    if (!inviteName.trim()) return;
-    inviteMember(inviteName, inviteEmail);
-    setInviteName("");
-    setInviteEmail("");
+  const handleAddMember = (userId: string) => {
+    const user = availableUsers.find((u) => u.id === userId);
+    if (user) addMember(user);
   };
 
   const handleRemoveMember = (userId: string) => {
@@ -74,25 +68,22 @@ export default function AdminView() {
         ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
-        <input
-          value={inviteName}
-          onChange={(e) => setInviteName(e.target.value)}
-          placeholder="Name"
-          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-        />
-        <input
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          placeholder="Email"
-          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-        />
-        <button
-          onClick={handleInviteMember}
-          style={{ flexShrink: 0, padding: "9px 18px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}
+      <div style={{ marginBottom: 32 }}>
+        <select
+          value=""
+          onChange={(e) => handleAddMember(e.target.value)}
+          disabled={availableUsers.length === 0}
+          style={{ width: "100%", padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         >
-          Invite
-        </button>
+          <option value="" disabled>
+            {availableUsers.length === 0 ? "No registered users available to add" : "Add a registered user…"}
+          </option>
+          {availableUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name} ({u.email})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>

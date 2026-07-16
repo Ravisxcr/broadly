@@ -1,9 +1,18 @@
 import { Hono } from "hono";
 import { randomUUID } from "crypto";
+import { ObjectId } from "mongodb";
 import clientPromise from "@/app/lib/mongodb";
 import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
-import type { BoardData, CardData, Member, WorkspaceData, BoardDoc, ListDoc, CardDoc } from "@/app/lib/trello/types";
+import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc } from "@/app/lib/trello/types";
 import { auth } from "@/app/server/auth";
+
+// better-auth's mongo adapter stores the user id as the Mongo `_id` (an ObjectId) and
+interface UserDoc {
+  _id: ObjectId;
+  name: string;
+  email: string;
+  image?: string | null;
+}
 
 const app = new Hono().basePath("/api");
 
@@ -26,9 +35,9 @@ async function getCardsCollection() {
   return client.db().collection<CardDoc>("cards");
 }
 
-async function getMembersCollection() {
+async function getUsersCollection() {
   const client = await clientPromise;
-  return client.db().collection<Member>("user");
+  return client.db().collection<UserDoc>("user");
 }
 
 async function getWorkspacesCollection() {
@@ -99,9 +108,10 @@ app.get("/boards", async (c) => {
 });
 
 app.get("/members", async (c) => {
-  const collection = await getMembersCollection();
-  const members = await collection.find({}, { projection: { _id: 0 } }).toArray();
-  return c.json(members);
+  const collection = await getUsersCollection();
+  const users = await collection.find({}, { projection: { name: 1, email: 1, image: 1 } }).toArray();
+  const authUsers: AuthUser[] = users.map((u) => ({ id: u._id.toString(), name: u.name, email: u.email, image: u.image ?? null }));
+  return c.json(authUsers);
 });
 
 app.get("/workspaces", async (c) => {

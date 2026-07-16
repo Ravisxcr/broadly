@@ -8,8 +8,8 @@ import { FcGoogle } from "react-icons/fc";
 
 export default function LoginView() {
   const { login, roster } = useAuth();
-  const [email, setEmail] = useState("ari@studio.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState(process.env.NEXT_PUBLIC_DEV_EMAIL ?? "");
+  const [password, setPassword] = useState(process.env.NEXT_PUBLIC_DEV_PASSWORD ?? "");
   const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
