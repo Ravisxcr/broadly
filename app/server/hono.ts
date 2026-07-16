@@ -3,8 +3,13 @@ import { randomUUID } from "crypto";
 import clientPromise from "@/app/lib/mongodb";
 import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
 import type { BoardData, CardData, Member, WorkspaceData } from "@/app/lib/trello/types";
+import { auth } from "@/app/server/auth";
 
 const app = new Hono().basePath("/api");
+
+app.on(["POST", "GET"], "/auth/**", (c) => {
+  return auth.handler(c.req.raw);
+});
 
 async function getCollection() {
   const client = await clientPromise;

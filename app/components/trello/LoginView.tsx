@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
+import { authClient } from "../../lib/auth-client";
+import { FaGithub, FaMicrosoft } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginView() {
   const { login, roster } = useAuth();
@@ -59,6 +62,36 @@ export default function LoginView() {
             Log in
           </button>
         </form>
+
+        <div style={{ marginTop: 24, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1, height: 1, background: "#E8E6E1" }} />
+          <div style={{ fontSize: 12, color: "#726F68", fontWeight: 600 }}>OR</div>
+          <div style={{ flex: 1, height: 1, background: "#E8E6E1" }} />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={() => authClient.signIn.social({ provider: "github" })}
+            title="Log in with GitHub"
+            style={{ width: 44, height: 44, background: "#24292e", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <FaGithub size={20} />
+          </button>
+          <button
+            onClick={() => authClient.signIn.social({ provider: "google" })}
+            title="Log in with Google"
+            style={{ width: 44, height: 44, background: "#fff", border: "1px solid #E8E6E1", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <FcGoogle size={20} />
+          </button>
+          <button
+            onClick={() => authClient.signIn.social({ provider: "microsoft" })}
+            title="Log in with Microsoft"
+            style={{ width: 44, height: 44, background: "#fff", border: "1px solid #E8E6E1", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#00a4ef" }}
+          >
+            <FaMicrosoft size={20} />
+          </button>
+        </div>
       </div>
     </div>
   );

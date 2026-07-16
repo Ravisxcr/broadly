@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AVATAR_COLORS, DEFAULT_ROSTER } from "../data";
 import type { Member } from "../types";
+import { authClient } from "../../auth-client";
 
 const SESSION_STORAGE_KEY = "boardly:currentUserId";
 
@@ -27,13 +28,29 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [roster, setRoster] = useState<Member[]>(() => DEFAULT_ROSTER.map((m) => ({ ...m })));
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  const { data: session } = authClient.useSession();
 
   useEffect(() => {
     const stored = readStoredUserId();
     if (stored) setCurrentUserId(stored);
   }, []);
 
-  const currentUser = roster.find((m) => m.id === currentUserId);
+  // Use the mock user from roster if present
+  let currentUser = roster.find((m) => m.id === currentUserId);
+  
+  // Or override with the real authenticated user
+  if (session?.user) {
+    currentUser = {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      initials: session.user.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase(),
+      color: "#4F46E5",
+      role: "member",
+    };
+  }
+
   const isAdmin = !!currentUser && currentUser.role === "admin";
 
   const login = (userId: string) => {
@@ -41,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUserId(userId);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await authClient.signOut();
     window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
     setCurrentUserId(null);
   };
