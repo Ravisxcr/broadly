@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .toUpperCase();
     setRoster((r) => {
       const color = AVATAR_COLORS[r.length % AVATAR_COLORS.length];
-      const newMember: Member = { id: "u" + Date.now(), initials, name: trimmedName, email: email.trim() || "—", color, role: "member" };
+      const newMember: Member = { id: crypto.randomUUID(), initials, name: trimmedName, email: email.trim() || "—", color, role: "member" };
       return [...r, newMember];
     });
   };

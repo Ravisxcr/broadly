@@ -82,3 +82,25 @@ export interface ThemeColors {
   accent: string;
   accentSubtle: string;
 }
+
+export interface CardDoc extends CardData {
+  boardId: string;
+  listId: string;
+}
+
+export interface ListDoc {
+  id: string;
+  boardId: string;
+  title: string;
+  cardIds: string[];
+}
+
+export interface BoardDoc {
+  id: string;
+  name: string;
+  cover: string;
+  memberIds: string[];
+  listIds: string[];
+  locked?: boolean;
+  workspaceId: string;
+}
