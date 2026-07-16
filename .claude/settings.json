@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npm ls *)",
+      "Bash(python3 -c \"print\\('py ok'\\)\")",
+      "Bash(node -e \"console.log\\(require\\('playwright-core/package.json'\\).version\\)\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000 --max-time 3)",
+      "Bash(node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001 --max-time 3)",
+      "Bash(bun run *)",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:3000 >/dev/null 2>&1 || curl -sf http://localhost:3001 >/dev/null 2>&1; do sleep 1; done')",
+      "Bash(curl -s -o /dev/null -w \"3000:%{http_code}\\\\n\" http://localhost:3000 --max-time 3)",
+      "Bash(curl -s -o /dev/null -w \"3001:%{http_code}\\\\n\" http://localhost:3001 --max-time 3)",
+      "Bash(sed -i 's/3001/3000/g' \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro2.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro3.js\")"
+    ]
+  }
+}
