@@ -75,3 +75,7 @@ export function updateCard(boardId: string, cardId: string, patch: Partial<Omit<
 export function moveCard(boardId: string, cardId: string, fromListId: string, toListId: string): Promise<BoardData> {
   return request<BoardData>(`/api/boards/${boardId}/move-card`, { method: "POST", body: JSON.stringify({ cardId, fromListId, toListId }) });
 }
+
+export function deleteCard(boardId: string, cardId: string): Promise<BoardData> {
+  return request<BoardData>(`/api/boards/${boardId}/cards/${cardId}`, { method: "DELETE" });
+}

@@ -102,13 +102,47 @@ app.get("/health", async (c) => {
 });
 
 app.get("/boards", async (c) => {
-  const collection = await getBoardsCollection();
+  const boardsCol = await getBoardsCollection();
   // Ensure workspaceId for backward compatibility
-  await collection.updateMany({ workspaceId: { $exists: false } }, { $set: { workspaceId: DEFAULT_WORKSPACES[0].id } });
-  const boards = await collection.find({}, { projection: { _id: 0 } }).toArray();
-  // Return shape expected by frontend (BoardData-ish, but lists can be empty since it only needs board metadata for list)
-  const boardDataList = boards.map(b => ({ ...b, lists: [] as any[] }));
-  return c.json(boardDataList);
+  await boardsCol.updateMany({ workspaceId: { $exists: false } }, { $set: { workspaceId: DEFAULT_WORKSPACES[0].id } });
+  const boardDocs = await boardsCol.find({}, { projection: { _id: 0 } }).toArray();
+
+  const listsCol = await getListsCollection();
+  const cardsCol = await getCardsCollection();
+  const [listDocs, cardDocs] = await Promise.all([
+    listsCol.find({}, { projection: { _id: 0 } }).toArray(),
+    cardsCol.find({}, { projection: { _id: 0 } }).toArray(),
+  ]);
+
+  const boards: BoardData[] = boardDocs.map((boardDoc) => {
+    const lists: BoardData["lists"] = boardDoc.listIds.map((listId) => {
+      const listDoc = listDocs.find((l) => l.id === listId);
+      if (!listDoc) return { id: listId, title: "Unknown", cards: [] };
+
+      const cards = listDoc.cardIds
+        .map((cardId) => {
+          const cardDoc = cardDocs.find((cd) => cd.id === cardId);
+          if (!cardDoc) return null;
+          const { boardId: _boardId, listId: _listId, ...cardData } = cardDoc;
+          return cardData as CardData;
+        })
+        .filter((cd): cd is CardData => cd !== null);
+
+      return { id: listDoc.id, title: listDoc.title, cards };
+    });
+
+    return {
+      id: boardDoc.id,
+      name: boardDoc.name,
+      cover: boardDoc.cover,
+      memberIds: boardDoc.memberIds,
+      locked: boardDoc.locked,
+      workspaceId: boardDoc.workspaceId,
+      lists,
+    };
+  });
+
+  return c.json(boards);
 });
 
 app.get("/members", async (c) => {
@@ -315,6 +349,21 @@ app.patch("/boards/:boardId/cards/:cardId", async (c) => {
   const result = await cardsCol.updateOne({ id: cardId, boardId }, { $set: patch });
   if (result.matchedCount === 0) return c.json({ error: "Card not found" }, 404);
   
+  const updated = await getBoardData(boardId);
+  return c.json(updated);
+});
+
+app.delete("/boards/:boardId/cards/:cardId", async (c) => {
+  const boardId = c.req.param("boardId");
+  const cardId = c.req.param("cardId");
+
+  const listsCol = await getListsCollection();
+  await listsCol.updateOne({ boardId, cardIds: cardId }, { $pull: { cardIds: cardId } });
+
+  const cardsCol = await getCardsCollection();
+  const result = await cardsCol.deleteOne({ id: cardId, boardId });
+  if (result.deletedCount === 0) return c.json({ error: "Card not found" }, 404);
+
   const updated = await getBoardData(boardId);
   return c.json(updated);
 });
