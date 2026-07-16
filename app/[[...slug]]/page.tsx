@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import TrelloApp from "../components/trello/TrelloApp";
+import TrelloShell from "../components/trello/TrelloShell";
 
 export default function Home() {
-  return (
-    <Suspense fallback={null}>
-      <TrelloApp />
-    </Suspense>
-  );
+  return <TrelloShell />;
 }

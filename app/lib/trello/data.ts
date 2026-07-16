@@ -43,6 +43,30 @@ export function memberById(roster: Member[], id: string): Member | undefined {
   return roster.find((m) => m.id === id);
 }
 
+export function findCard(boards: BoardData[], boardId: string, cardId: string): CardData | null {
+  const board = boards.find((b) => b.id === boardId);
+  if (!board) return null;
+  for (const list of board.lists) {
+    const card = list.cards.find((c) => c.id === cardId);
+    if (card) return card;
+  }
+  return null;
+}
+
+export function findCardListId(boards: BoardData[], boardId: string, cardId: string): string | null {
+  const board = boards.find((b) => b.id === boardId);
+  if (!board) return null;
+  const list = board.lists.find((l) => l.cards.some((c) => c.id === cardId));
+  return list?.id ?? null;
+}
+
+export function canAccessBoard(board: BoardData, workspaces: WorkspaceData[], userId: string, isAdmin: boolean): boolean {
+  if (isAdmin) return true;
+  if (board.memberIds.includes(userId)) return true;
+  const workspace = workspaces.find((w) => w.id === board.workspaceId);
+  return !!workspace?.memberIds.includes(userId);
+}
+
 function card(id: string, title: string, opts: Partial<Omit<CardData, "id" | "title">> = {}): CardData {
   return {
     id,

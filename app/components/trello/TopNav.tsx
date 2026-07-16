@@ -1,75 +1,73 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft, Lock, Monitor, Moon, MoreHorizontal, Sun } from "lucide-react";
-import type { BoardData, Member, ThemeColors, ThemeMode, ViewName } from "../../lib/trello/types";
+import { useAuth } from "../../lib/trello/contexts/AuthContext";
+import { useTheme } from "../../lib/trello/contexts/ThemeContext";
+import { useBoards } from "../../lib/trello/contexts/BoardsContext";
+import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
 
-interface TopNavProps {
-  theme: ThemeColors;
-  themeMode: ThemeMode;
-  view: ViewName;
-  activeBoard: BoardData | null;
-  isAdmin: boolean;
-  currentUser: Member | undefined;
-  profileMenuOpen: boolean;
-  onToggleProfileMenu: () => void;
-  onCloseProfileMenu: () => void;
-  onGoToDashboard: () => void;
-  onGoToAdmin: () => void;
-  onLogout: () => void;
-  onSetLightTheme: () => void;
-  onSetDarkTheme: () => void;
-  onSetSystemTheme: () => void;
-  boardMenuOpen: boolean;
-  onToggleBoardMenu: () => void;
-  onCloseBoardMenu: () => void;
-  editingBoardName: boolean;
-  editingBoardNameValue: string;
-  onStartEditBoardName: () => void;
-  onEditingBoardNameChange: (value: string) => void;
-  onConfirmEditBoardName: () => void;
-  onCancelEditBoardName: () => void;
-  onToggleLockBoard: () => void;
-  onDeleteBoard: () => void;
-}
+export default function TopNav() {
+  const { theme, themeMode, setThemeMode } = useTheme();
+  const { currentUser, isAdmin, logout } = useAuth();
+  const { boards, updateBoard, deleteBoard } = useBoards();
+  const { view, activeBoardId, goToDashboard, goToAdmin, resetToRoot } = useNavigation();
 
-export default function TopNav({
-  theme,
-  themeMode,
-  view,
-  activeBoard,
-  isAdmin,
-  currentUser,
-  profileMenuOpen,
-  onToggleProfileMenu,
-  onCloseProfileMenu,
-  onGoToDashboard,
-  onGoToAdmin,
-  onLogout,
-  onSetLightTheme,
-  onSetDarkTheme,
-  onSetSystemTheme,
-  boardMenuOpen,
-  onToggleBoardMenu,
-  onCloseBoardMenu,
-  editingBoardName,
-  editingBoardNameValue,
-  onStartEditBoardName,
-  onEditingBoardNameChange,
-  onConfirmEditBoardName,
-  onCancelEditBoardName,
-  onToggleLockBoard,
-  onDeleteBoard,
-}: TopNavProps) {
+  const activeBoard = boards.find((b) => b.id === activeBoardId) ?? null;
+
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [boardMenuOpen, setBoardMenuOpen] = useState(false);
+  const [editingBoardName, setEditingBoardName] = useState(false);
+  const [editingBoardNameValue, setEditingBoardNameValue] = useState("");
+
   const dark = themeMode === "dark";
   const isLight = themeMode === "light";
   const isSystem = themeMode === "system";
+
+  const handleGoToAdmin = () => {
+    setProfileMenuOpen(false);
+    goToAdmin();
+  };
+
+  const handleLogout = () => {
+    logout();
+    resetToRoot();
+  };
+
+  const startEditBoardName = () => {
+    if (!activeBoard) return;
+    setEditingBoardNameValue(activeBoard.name);
+    setEditingBoardName(true);
+    setBoardMenuOpen(false);
+  };
+  const cancelEditBoardName = () => setEditingBoardName(false);
+  const confirmEditBoardName = () => {
+    const name = editingBoardNameValue.trim();
+    setEditingBoardName(false);
+    if (!activeBoard || !name) return;
+    updateBoard(activeBoard.id, { name });
+  };
+
+  const toggleLockBoard = () => {
+    if (!activeBoard) return;
+    setBoardMenuOpen(false);
+    updateBoard(activeBoard.id, { locked: !activeBoard.locked });
+  };
+
+  const handleDeleteBoard = () => {
+    if (!activeBoard) return;
+    if (!window.confirm("Delete this board? This can't be undone.")) return;
+    setBoardMenuOpen(false);
+    goToDashboard();
+    deleteBoard(activeBoard.id);
+  };
 
   return (
     <div style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 20px", borderBottom: `1px solid ${theme.border}`, background: theme.panelBg }}>
       {view === "board" && activeBoard && (
         <>
           <button
-            onClick={onGoToDashboard}
+            onClick={goToDashboard}
             style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <ArrowLeft size={15} />
@@ -79,11 +77,11 @@ export default function TopNav({
             <input
               autoFocus
               value={editingBoardNameValue}
-              onChange={(e) => onEditingBoardNameChange(e.target.value)}
-              onBlur={onConfirmEditBoardName}
+              onChange={(e) => setEditingBoardNameValue(e.target.value)}
+              onBlur={confirmEditBoardName}
               onKeyDown={(e) => {
-                if (e.key === "Enter") onConfirmEditBoardName();
-                if (e.key === "Escape") onCancelEditBoardName();
+                if (e.key === "Enter") confirmEditBoardName();
+                if (e.key === "Escape") cancelEditBoardName();
               }}
               style={{ fontSize: 15, fontWeight: 800, border: `1px solid #4F46E5`, borderRadius: 6, padding: "3px 6px", fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
             />
@@ -98,7 +96,7 @@ export default function TopNav({
           {isAdmin && !editingBoardName && (
             <div style={{ position: "relative" }}>
               <button
-                onClick={onToggleBoardMenu}
+                onClick={() => setBoardMenuOpen((v) => !v)}
                 title="Board options"
                 style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
@@ -106,16 +104,16 @@ export default function TopNav({
               </button>
               {boardMenuOpen && (
                 <>
-                  <div onClick={onCloseBoardMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+                  <div onClick={() => setBoardMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
                   <div style={{ position: "absolute", top: 32, left: 0, width: 180, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 6 }}>
-                    <div onClick={onStartEditBoardName} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                    <div onClick={startEditBoardName} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
                       Rename board
                     </div>
-                    <div onClick={onToggleLockBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                    <div onClick={toggleLockBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
                       {activeBoard.locked ? "Unlock board" : "Lock board"}
                     </div>
                     <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
-                    <div onClick={onDeleteBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                    <div onClick={handleDeleteBoard} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
                       Delete board
                     </div>
                   </div>
@@ -134,7 +132,7 @@ export default function TopNav({
           style={{ width: 180, padding: "8px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontSize: 13, fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
         />
         <div
-          onClick={onToggleProfileMenu}
+          onClick={() => setProfileMenuOpen((v) => !v)}
           title={currentUser?.name}
           style={{ width: 30, height: 30, borderRadius: "50%", background: "#4F46E5", color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
         >
@@ -143,21 +141,21 @@ export default function TopNav({
 
         {profileMenuOpen && (
           <>
-            <div onClick={onCloseProfileMenu} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
+            <div onClick={() => setProfileMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 70 }} />
             <div style={{ position: "absolute", top: 40, right: 0, width: 220, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.16)", zIndex: 71, padding: 8 }}>
               <div style={{ padding: "8px 10px", borderBottom: `1px solid ${theme.border}`, marginBottom: 6 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{currentUser?.name}</div>
                 <div style={{ fontSize: 11.5, color: theme.textSecondary }}>{currentUser?.email}</div>
               </div>
               {isAdmin && (
-                <div onClick={onGoToAdmin} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
+                <div onClick={handleGoToAdmin} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: theme.text }}>
                   Admin settings
                 </div>
               )}
               <div style={{ padding: "8px 10px 4px", fontSize: 11, fontWeight: 700, color: theme.textSecondary, textTransform: "uppercase", letterSpacing: "0.04em" }}>Theme</div>
               <div style={{ display: "flex", gap: 6, padding: "2px 10px 8px" }}>
                 <button
-                  onClick={onSetLightTheme}
+                  onClick={() => setThemeMode("light")}
                   title="Light"
                   aria-label="Light theme"
                   style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: isLight ? "#4F46E5" : "transparent", color: isLight ? "#fff" : theme.textSecondary }}
@@ -165,7 +163,7 @@ export default function TopNav({
                   <Sun size={14} />
                 </button>
                 <button
-                  onClick={onSetDarkTheme}
+                  onClick={() => setThemeMode("dark")}
                   title="Dark"
                   aria-label="Dark theme"
                   style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: dark ? "#4F46E5" : "transparent", color: dark ? "#fff" : theme.textSecondary }}
@@ -173,7 +171,7 @@ export default function TopNav({
                   <Moon size={14} />
                 </button>
                 <button
-                  onClick={onSetSystemTheme}
+                  onClick={() => setThemeMode("system")}
                   title="System"
                   aria-label="System theme"
                   style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 0", borderRadius: 6, border: `1px solid ${theme.border}`, cursor: "pointer", background: isSystem ? "#4F46E5" : "transparent", color: isSystem ? "#fff" : theme.textSecondary }}
@@ -181,7 +179,7 @@ export default function TopNav({
                   <Monitor size={14} />
                 </button>
               </div>
-              <div onClick={onLogout} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48", marginTop: 2 }}>
+              <div onClick={handleLogout} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48", marginTop: 2 }}>
                 Log out
               </div>
             </div>

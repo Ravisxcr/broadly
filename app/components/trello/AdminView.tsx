@@ -1,37 +1,48 @@
 "use client";
 
+import { useState } from "react";
 import { X } from "lucide-react";
-import type { BoardData, Member, ThemeColors, WorkspaceData } from "../../lib/trello/types";
+import { useAuth } from "../../lib/trello/contexts/AuthContext";
+import { useTheme } from "../../lib/trello/contexts/ThemeContext";
+import { useBoards } from "../../lib/trello/contexts/BoardsContext";
+import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
 
-interface AdminViewProps {
-  theme: ThemeColors;
-  roster: Member[];
-  boards: BoardData[];
-  workspaces: WorkspaceData[];
-  inviteName: string;
-  inviteEmail: string;
-  onInviteNameChange: (value: string) => void;
-  onInviteEmailChange: (value: string) => void;
-  onInviteMember: () => void;
-  onRemoveMember: (memberId: string) => void;
-  onToggleBoardAccess: (boardId: string, memberId: string) => void;
-  onToggleWorkspaceAccess: (workspaceId: string, memberId: string) => void;
-}
+export default function AdminView() {
+  const { theme } = useTheme();
+  const { roster, inviteMember, removeMember } = useAuth();
+  const { boards, updateBoard } = useBoards();
+  const { workspaces, updateWorkspace } = useWorkspaces();
 
-export default function AdminView({
-  theme,
-  roster,
-  boards,
-  workspaces,
-  inviteName,
-  inviteEmail,
-  onInviteNameChange,
-  onInviteEmailChange,
-  onInviteMember,
-  onRemoveMember,
-  onToggleBoardAccess,
-  onToggleWorkspaceAccess,
-}: AdminViewProps) {
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const handleInviteMember = () => {
+    if (!inviteName.trim()) return;
+    inviteMember(inviteName, inviteEmail);
+    setInviteName("");
+    setInviteEmail("");
+  };
+
+  const handleRemoveMember = (userId: string) => {
+    removeMember(userId);
+    boards.filter((b) => b.memberIds.includes(userId)).forEach((b) => updateBoard(b.id, { memberIds: b.memberIds.filter((id) => id !== userId) }));
+    workspaces.filter((w) => w.memberIds.includes(userId)).forEach((w) => updateWorkspace(w.id, { memberIds: w.memberIds.filter((id) => id !== userId) }));
+  };
+
+  const toggleBoardAccess = (boardId: string, userId: string) => {
+    const board = boards.find((b) => b.id === boardId);
+    if (!board) return;
+    const memberIds = board.memberIds.includes(userId) ? board.memberIds.filter((id) => id !== userId) : [...board.memberIds, userId];
+    updateBoard(boardId, { memberIds });
+  };
+
+  const toggleWorkspaceAccess = (workspaceId: string, userId: string) => {
+    const workspace = workspaces.find((w) => w.id === workspaceId);
+    if (!workspace) return;
+    const memberIds = workspace.memberIds.includes(userId) ? workspace.memberIds.filter((id) => id !== userId) : [...workspace.memberIds, userId];
+    updateWorkspace(workspaceId, { memberIds });
+  };
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
     <div style={{ maxWidth: "85%", margin: "0 auto" }}>
@@ -53,7 +64,7 @@ export default function AdminView({
             </div>
             {m.role !== "admin" && (
               <button
-                onClick={() => onRemoveMember(m.id)}
+                onClick={() => handleRemoveMember(m.id)}
                 style={{ width: 26, height: 26, flexShrink: 0, border: "none", background: theme.subtleBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 <X size={14} />
@@ -66,18 +77,18 @@ export default function AdminView({
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
         <input
           value={inviteName}
-          onChange={(e) => onInviteNameChange(e.target.value)}
+          onChange={(e) => setInviteName(e.target.value)}
           placeholder="Name"
           style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         />
         <input
           value={inviteEmail}
-          onChange={(e) => onInviteEmailChange(e.target.value)}
+          onChange={(e) => setInviteEmail(e.target.value)}
           placeholder="Email"
           style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         />
         <button
-          onClick={onInviteMember}
+          onClick={handleInviteMember}
           style={{ flexShrink: 0, padding: "9px 18px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}
         >
           Invite
@@ -102,7 +113,7 @@ export default function AdminView({
                 return (
                   <div
                     key={m.id}
-                    onClick={() => m.role !== "admin" && onToggleWorkspaceAccess(w.id, m.id)}
+                    onClick={() => m.role !== "admin" && toggleWorkspaceAccess(w.id, m.id)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -147,7 +158,7 @@ export default function AdminView({
                 return (
                   <div
                     key={m.id}
-                    onClick={() => m.role !== "admin" && !hasWorkspaceAccess && onToggleBoardAccess(b.id, m.id)}
+                    onClick={() => m.role !== "admin" && !hasWorkspaceAccess && toggleBoardAccess(b.id, m.id)}
                     title={hasWorkspaceAccess ? `${m.name} has access via workspace membership` : undefined}
                     style={{
                       display: "flex",

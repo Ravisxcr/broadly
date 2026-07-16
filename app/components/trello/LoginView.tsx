@@ -1,11 +1,10 @@
 "use client";
 
-interface LoginViewProps {
-  onLoginAdmin: () => void;
-  onLoginMember: () => void;
-}
+import { useAuth } from "../../lib/trello/contexts/AuthContext";
 
-export default function LoginView({ onLoginAdmin, onLoginMember }: LoginViewProps) {
+export default function LoginView() {
+  const { login } = useAuth();
+
   return (
     <div style={{ width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FAFAF9" }}>
       <div style={{ width: 380, padding: "40px 36px", background: "#FFFFFF", border: "1px solid #E8E6E1", borderRadius: 16, boxShadow: "0 20px 60px rgba(20,20,30,0.06)" }}>
@@ -36,13 +35,13 @@ export default function LoginView({ onLoginAdmin, onLoginMember }: LoginViewProp
             />
           </div>
           <button
-            onClick={onLoginAdmin}
+            onClick={() => login("u1")}
             style={{ marginTop: 8, width: "100%", padding: 11, background: "#4F46E5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
           >
             Log in as Admin (Ari)
           </button>
           <button
-            onClick={onLoginMember}
+            onClick={() => login("u2")}
             style={{ width: "100%", padding: 11, background: "transparent", color: "#4F46E5", border: "1px solid #E8E6E1", borderRadius: 8, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}
           >
             Log in as Member (Jess)
