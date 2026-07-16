@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { randomUUID } from "crypto";
 import clientPromise from "@/app/lib/mongodb";
-import { initialBoards, COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
+import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
 import type { BoardData, CardData, Member, WorkspaceData } from "@/app/lib/trello/types";
 
 const app = new Hono().basePath("/api");
@@ -48,10 +48,6 @@ app.get("/health", async (c) => {
 
 app.get("/boards", async (c) => {
   const collection = await getCollection();
-  const count = await collection.countDocuments();
-  if (count === 0) {
-    await collection.insertMany(initialBoards());
-  }
   await collection.updateMany({ workspaceId: { $exists: false } }, { $set: { workspaceId: DEFAULT_WORKSPACES[0].id } });
   const boards = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(boards);
@@ -59,20 +55,12 @@ app.get("/boards", async (c) => {
 
 app.get("/members", async (c) => {
   const collection = await getMembersCollection();
-  const count = await collection.countDocuments();
-  if (count === 0) {
-    await collection.insertMany(DEFAULT_ROSTER);
-  }
   const members = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(members);
 });
 
 app.get("/workspaces", async (c) => {
   const collection = await getWorkspacesCollection();
-  const count = await collection.countDocuments();
-  if (count === 0) {
-    await collection.insertMany(DEFAULT_WORKSPACES);
-  }
   await collection.updateMany({ memberIds: { $exists: false } }, { $set: { memberIds: [] } });
   const workspaces = await collection.find({}, { projection: { _id: 0 } }).toArray();
   return c.json(workspaces);
