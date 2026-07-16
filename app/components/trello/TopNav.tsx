@@ -63,12 +63,16 @@ export default function TopNav() {
   };
 
   return (
-    <div style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 20px", borderBottom: `1px solid ${theme.border}`, background: theme.panelBg }}>
+    <div
+      className="flex items-center shrink-0 h-14 gap-2 sm:gap-3 md:gap-[14px] px-3 sm:px-5"
+      style={{ borderBottom: `1px solid ${theme.border}`, background: theme.panelBg }}
+    >
       {view === "board" && activeBoard && (
         <>
           <button
             onClick={goToDashboard}
-            style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
+            className="shrink-0 flex items-center justify-center"
+            style={{ width: 30, height: 30, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary }}
           >
             <ArrowLeft size={15} />
           </button>
@@ -83,22 +87,24 @@ export default function TopNav() {
                 if (e.key === "Enter") confirmEditBoardName();
                 if (e.key === "Escape") cancelEditBoardName();
               }}
+              className="flex-1 min-w-0"
               style={{ fontSize: 15, fontWeight: 800, border: `1px solid #4F46E5`, borderRadius: 6, padding: "3px 6px", fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
             />
           ) : (
-            <div style={{ fontSize: 15, fontWeight: 800 }}>{activeBoard.name}</div>
+            <div className="truncate flex-1 min-w-0" style={{ fontSize: 15, fontWeight: 800 }}>{activeBoard.name}</div>
           )}
           {activeBoard.locked && (
-            <div title="Board is locked" style={{ display: "flex", color: theme.textSecondary }}>
+            <div title="Board is locked" className="shrink-0 flex" style={{ color: theme.textSecondary }}>
               <Lock size={13} />
             </div>
           )}
           {isAdmin && !editingBoardName && (
-            <div style={{ position: "relative" }}>
+            <div className="shrink-0 relative">
               <button
                 onClick={() => setBoardMenuOpen((v) => !v)}
                 title="Board options"
-                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className="flex items-center justify-center shrink-0"
+                style={{ width: 26, height: 26, border: `1px solid ${theme.border}`, background: theme.panelBg, borderRadius: 6, cursor: "pointer", color: theme.textSecondary, fontFamily: "inherit" }}
               >
                 <MoreHorizontal size={15} />
               </button>
@@ -123,18 +129,20 @@ export default function TopNav() {
           )}
         </>
       )}
-      {view === "dashboard" && <div style={{ fontSize: 15, fontWeight: 800 }}>Your boards</div>}
-      {view === "admin" && <div style={{ fontSize: 15, fontWeight: 800 }}>Admin panel</div>}
+      {view === "dashboard" && <div className="truncate flex-1 min-w-0" style={{ fontSize: 15, fontWeight: 800 }}>Your boards</div>}
+      {view === "admin" && <div className="truncate flex-1 min-w-0" style={{ fontSize: 15, fontWeight: 800 }}>Admin panel</div>}
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+      <div className="ml-auto flex items-center gap-2 sm:gap-3 relative shrink-0">
         <input
           placeholder="Search…"
+          className="hidden sm:block"
           style={{ width: 180, padding: "8px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontSize: 13, fontFamily: "inherit", background: theme.inputBg, color: theme.text }}
         />
         <div
           onClick={() => setProfileMenuOpen((v) => !v)}
           title={currentUser?.name}
-          style={{ width: 30, height: 30, borderRadius: "50%", background: "#4F46E5", color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          className="flex items-center justify-center shrink-0 cursor-pointer"
+          style={{ width: 30, height: 30, borderRadius: "50%", background: "#4F46E5", color: "#fff", fontSize: 12, fontWeight: 700 }}
         >
           {currentUser?.initials}
         </div>
