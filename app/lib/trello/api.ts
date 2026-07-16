@@ -20,6 +20,10 @@ export function fetchMembers(): Promise<AuthUser[]> {
   return request<AuthUser[]>("/api/members");
 }
 
+export function fetchAuthProviders(): Promise<{ providers: string[] }> {
+  return request<{ providers: string[] }>("/api/auth-providers");
+}
+
 export function createBoard(input: { name: string; templateId: string; memberIds: string[]; workspaceId: string }): Promise<BoardData> {
   return request<BoardData>("/api/boards", { method: "POST", body: JSON.stringify(input) });
 }

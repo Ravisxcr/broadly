@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 import clientPromise from "@/app/lib/mongodb";
 import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
 import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc } from "@/app/lib/trello/types";
-import { auth } from "@/app/server/auth";
+import { auth, enabledSocialProviders } from "@/app/server/auth";
 
 // better-auth's mongo adapter stores the user id as the Mongo `_id` (an ObjectId) and
 interface UserDoc {
@@ -18,6 +18,10 @@ const app = new Hono().basePath("/api");
 
 app.on(["POST", "GET"], "/auth/**", (c) => {
   return auth.handler(c.req.raw);
+});
+
+app.get("/auth-providers", (c) => {
+  return c.json({ providers: enabledSocialProviders });
 });
 
 async function getBoardsCollection() {

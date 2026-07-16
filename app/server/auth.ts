@@ -32,23 +32,35 @@ if (process.env.NODE_ENV === "development") {
 // We can just use a synchronous DB instance, MongoDB driver handles queuing until connected.
 const db = client.db();
 
+// A provider with no client id can't authenticate against anything, so it's left
+// out of `socialProviders` entirely rather than registered with an empty clientId.
+const socialProviders: NonNullable<Parameters<typeof betterAuth>[0]["socialProviders"]> = {};
+
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  socialProviders.github = {
+    clientId: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  };
+}
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  socialProviders.google = {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  };
+}
+if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+  socialProviders.microsoft = {
+    clientId: process.env.MICROSOFT_CLIENT_ID,
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+    tenantId: process.env.MICROSOFT_TENANT_ID, // optional
+  };
+}
+
+export const enabledSocialProviders = Object.keys(socialProviders) as Array<keyof typeof socialProviders>;
+
 export const auth = betterAuth({
   database: mongodbAdapter(db, {
     client: client,
   }),
-  socialProviders: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-    },
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    },
-    microsoft: {
-      clientId: process.env.MICROSOFT_CLIENT_ID as string,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string,
-      tenantId: process.env.MICROSOFT_TENANT_ID as string | undefined, // optional
-    },
-  },
+  socialProviders,
 });
