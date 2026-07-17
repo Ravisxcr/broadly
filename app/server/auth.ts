@@ -59,8 +59,12 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
 export const enabledSocialProviders = Object.keys(socialProviders) as Array<keyof typeof socialProviders>;
 
 export const auth = betterAuth({
+  // Multi-document transactions require a replica set, which a plain local
+  // mongod doesn't provide. Disable them rather than requiring rs.initiate()
+  // for local dev.
   database: mongodbAdapter(db, {
     client: client,
+    transaction: false,
   }),
   socialProviders,
 });
