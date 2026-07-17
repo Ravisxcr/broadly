@@ -6,7 +6,7 @@ import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_WORKSPACES, WORKSPACE_COLORS } 
 import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc, Role } from "@/app/lib/trello/types";
 import { auth, enabledSocialProviders } from "@/app/server/auth";
 
-// better-auth's mongo adapter stores the user id as the Mongo `_id` (an ObjectId) and
+// better-auth's mongo adapter stores the user id as the Mongo `_id` (an ObjectId).
 interface UserDoc {
   _id: ObjectId;
   name: string;
@@ -14,6 +14,16 @@ interface UserDoc {
   image?: string | null;
   role?: Role;
 }
+
+// Single-document counter backing the "always at least one admin" invariant —
+// kept in sync with the `user` collection's admin count via atomic $inc/$setOnInsert
+// operations, since a single-document read-modify-write is atomic in MongoDB even
+// without multi-document transactions (unavailable on this standalone deployment).
+interface AdminCountDoc {
+  _id: string;
+  count: number;
+}
+const ADMIN_COUNT_ID = "adminCount";
 
 const app = new Hono().basePath("/api");
 
@@ -50,6 +60,32 @@ async function getWorkspacesCollection() {
   return client.db().collection<WorkspaceData>("workspaces");
 }
 
+async function getMetaCollection() {
+  const client = await clientPromise;
+  return client.db().collection<AdminCountDoc>("_meta");
+}
+
+/** Self-heals the admin counter from real data the first time it's needed (e.g. against a pre-existing DB). */
+async function ensureAdminCountMeta() {
+  const metaCol = await getMetaCollection();
+  const existing = await metaCol.findOne({ _id: ADMIN_COUNT_ID });
+  if (existing) return metaCol;
+  const usersCol = await getUsersCollection();
+  const realCount = await usersCol.countDocuments({ role: "admin" });
+  await metaCol.updateOne({ _id: ADMIN_COUNT_ID }, { $setOnInsert: { count: realCount } }, { upsert: true });
+  return metaCol;
+}
+
+async function findBoardDoc(boardId: string): Promise<BoardDoc | null> {
+  const boardsCol = await getBoardsCollection();
+  return boardsCol.findOne({ id: boardId });
+}
+
+async function findListDoc(boardId: string, listId: string): Promise<ListDoc | null> {
+  const listsCol = await getListsCollection();
+  return listsCol.findOne({ id: listId, boardId });
+}
+
 async function getBoardData(boardId: string): Promise<BoardData | null> {
   const boardsCol = await getBoardsCollection();
   const boardDoc = await boardsCol.findOne({ id: boardId }, { projection: { _id: 0 } });
@@ -60,14 +96,16 @@ async function getBoardData(boardId: string): Promise<BoardData | null> {
 
   const listDocs = await listsCol.find({ boardId }, { projection: { _id: 0 } }).toArray();
   const cardDocs = await cardsCol.find({ boardId }, { projection: { _id: 0 } }).toArray();
+  const listById = new Map(listDocs.map((l) => [l.id, l]));
+  const cardById = new Map(cardDocs.map((c) => [c.id, c]));
 
   const lists: BoardData["lists"] = boardDoc.listIds.map((listId) => {
-    const listDoc = listDocs.find((l) => l.id === listId);
+    const listDoc = listById.get(listId);
     if (!listDoc) return { id: listId, title: "Unknown", cards: [] };
 
     const cards = listDoc.cardIds
       .map((cardId) => {
-        const cardDoc = cardDocs.find((c) => c.id === cardId);
+        const cardDoc = cardById.get(cardId);
         if (!cardDoc) return null;
         const { boardId: _, listId: __, ...cardData } = cardDoc;
         return cardData as CardData;
@@ -114,15 +152,17 @@ app.get("/boards", async (c) => {
     listsCol.find({}, { projection: { _id: 0 } }).toArray(),
     cardsCol.find({}, { projection: { _id: 0 } }).toArray(),
   ]);
+  const listById = new Map(listDocs.map((l) => [l.id, l]));
+  const cardById = new Map(cardDocs.map((c) => [c.id, c]));
 
   const boards: BoardData[] = boardDocs.map((boardDoc) => {
     const lists: BoardData["lists"] = boardDoc.listIds.map((listId) => {
-      const listDoc = listDocs.find((l) => l.id === listId);
+      const listDoc = listById.get(listId);
       if (!listDoc) return { id: listId, title: "Unknown", cards: [] };
 
       const cards = listDoc.cardIds
         .map((cardId) => {
-          const cardDoc = cardDocs.find((cd) => cd.id === cardId);
+          const cardDoc = cardById.get(cardId);
           if (!cardDoc) return null;
           const { boardId: _boardId, listId: _listId, ...cardData } = cardDoc;
           return cardData as CardData;
@@ -147,6 +187,9 @@ app.get("/boards", async (c) => {
 });
 
 app.get("/members", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return c.json({ error: "Not authenticated" }, 401);
+
   const collection = await getUsersCollection();
   const users = await collection.find({}, { projection: { name: 1, email: 1, image: 1, role: 1 } }).toArray();
   const authUsers: AuthUser[] = users.map((u) => ({ id: u._id.toString(), name: u.name, email: u.email, image: u.image ?? null, role: u.role ?? "member" }));
@@ -173,21 +216,30 @@ app.patch("/members/:userId/role", async (c) => {
   const target = await usersCol.findOne({ _id: targetId });
   if (!target) return c.json({ error: "User not found" }, 404);
 
+  const metaCol = await ensureAdminCountMeta();
+  const wasAdmin = (target.role ?? "member") === "admin";
+
   if (role === "member") {
-    // There must always be at least one admin — block demoting the last one.
-    if ((target.role ?? "member") === "admin") {
-      const adminCount = await usersCol.countDocuments({ role: "admin" });
-      if (adminCount <= 1) {
+    if (wasAdmin) {
+      // Atomically claim the decrement — only succeeds if it would still leave
+      // at least one admin standing. This is a single-document $inc, so it's
+      // race-free against concurrent demotions the same way claimFirstAdmin is.
+      const decremented = await metaCol.updateOne({ _id: ADMIN_COUNT_ID, count: { $gt: 1 } }, { $inc: { count: -1 } });
+      if (decremented.modifiedCount === 0) {
         return c.json({ error: "There must always be at least one admin — promote another member to admin first" }, 400);
       }
     }
     await usersCol.updateOne({ _id: targetId }, { $set: { role: "member" } });
   } else {
+    if (!wasAdmin) {
+      await metaCol.updateOne({ _id: ADMIN_COUNT_ID }, { $inc: { count: 1 } }, { upsert: true });
+    }
     await usersCol.updateOne({ _id: targetId }, { $set: { role: "admin" } });
   }
 
   const updated = await usersCol.findOne({ _id: targetId });
-  const authUser: AuthUser = { id: updated!._id.toString(), name: updated!.name, email: updated!.email, image: updated!.image ?? null, role: updated!.role ?? "member" };
+  if (!updated) return c.json({ error: "User not found" }, 404);
+  const authUser: AuthUser = { id: updated._id.toString(), name: updated.name, email: updated.email, image: updated.image ?? null, role: updated.role ?? "member" };
   return c.json(authUser);
 });
 
@@ -249,7 +301,7 @@ app.post("/boards", async (c) => {
   const boardsCol = await getBoardsCollection();
   const count = await boardsCol.countDocuments();
   const boardId = randomUUID();
-  
+
   const boardDoc: BoardDoc = {
     id: boardId,
     name,
@@ -266,11 +318,14 @@ app.post("/boards", async (c) => {
     lists.push({ id: listId, boardId, title, cardIds: [] });
   });
 
-  await boardsCol.insertOne({ ...boardDoc });
+  // Insert the lists *before* the board that references them, so a failure in
+  // between leaves (at worst) harmless orphaned list docs rather than a board
+  // whose listIds point at lists that were never created.
   if (lists.length > 0) {
     const listsCol = await getListsCollection();
     await listsCol.insertMany(lists);
   }
+  await boardsCol.insertOne({ ...boardDoc });
 
   const boardData = await getBoardData(boardId);
   return c.json(boardData, 201);
@@ -283,7 +338,7 @@ app.patch("/boards/:boardId", async (c) => {
   if (body.name !== undefined) set.name = body.name;
   if (body.locked !== undefined) set.locked = body.locked;
   if (body.memberIds !== undefined) set.memberIds = body.memberIds;
-  
+
   const result = await boardsCol.findOneAndUpdate(
     { id: c.req.param("boardId") },
     { $set: set },
@@ -303,8 +358,7 @@ app.delete("/boards/:boardId", async (c) => {
   const result = await boardsCol.deleteOne({ id: boardId });
   if (result.deletedCount === 0) return c.json({ error: "Board not found" }, 404);
 
-  await listsCol.deleteMany({ boardId });
-  await cardsCol.deleteMany({ boardId });
+  await Promise.all([listsCol.deleteMany({ boardId }), cardsCol.deleteMany({ boardId })]);
 
   return c.json({ ok: true });
 });
@@ -313,17 +367,21 @@ app.post("/boards/:boardId/lists", async (c) => {
   const { title } = await c.req.json<{ title?: string }>();
   const trimmed = title?.trim();
   if (!trimmed) return c.json({ error: "title is required" }, 400);
-  
+
   const boardId = c.req.param("boardId");
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
   const listId = randomUUID();
   const listDoc: ListDoc = { id: listId, boardId, title: trimmed, cardIds: [] };
-  
+
   const listsCol = await getListsCollection();
   await listsCol.insertOne(listDoc);
-  
+
   const boardsCol = await getBoardsCollection();
   await boardsCol.updateOne({ id: boardId }, { $push: { listIds: listId } });
-  
+
   const updated = await getBoardData(boardId);
   return c.json(updated, 201);
 });
@@ -332,29 +390,42 @@ app.patch("/boards/:boardId/lists/:listId", async (c) => {
   const { title } = await c.req.json<{ title?: string }>();
   const trimmed = title?.trim();
   if (!trimmed) return c.json({ error: "title is required" }, 400);
-  
+
+  const boardId = c.req.param("boardId");
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
   const listId = c.req.param("listId");
   const listsCol = await getListsCollection();
-  const result = await listsCol.updateOne({ id: listId, boardId: c.req.param("boardId") }, { $set: { title: trimmed } });
+  const result = await listsCol.updateOne({ id: listId, boardId }, { $set: { title: trimmed } });
   if (result.matchedCount === 0) return c.json({ error: "List not found" }, 404);
-  
-  const updated = await getBoardData(c.req.param("boardId"));
+
+  const updated = await getBoardData(boardId);
   return c.json(updated);
 });
 
 app.delete("/boards/:boardId/lists/:listId", async (c) => {
   const boardId = c.req.param("boardId");
   const listId = c.req.param("listId");
-  
+
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
+  const list = await findListDoc(boardId, listId);
+  if (!list) return c.json({ error: "List not found" }, 404);
+
   const boardsCol = await getBoardsCollection();
-  await boardsCol.updateOne({ id: boardId }, { $pull: { listIds: listId } });
-  
   const listsCol = await getListsCollection();
-  await listsCol.deleteOne({ id: listId, boardId });
-  
   const cardsCol = await getCardsCollection();
-  await cardsCol.deleteMany({ listId, boardId });
-  
+
+  await Promise.all([
+    boardsCol.updateOne({ id: boardId }, { $pull: { listIds: listId } }),
+    listsCol.deleteOne({ id: listId, boardId }),
+    cardsCol.deleteMany({ listId, boardId }),
+  ]);
+
   const updated = await getBoardData(boardId);
   return c.json(updated);
 });
@@ -363,31 +434,54 @@ app.post("/boards/:boardId/lists/:listId/cards", async (c) => {
   const { title } = await c.req.json<{ title?: string }>();
   const trimmed = title?.trim();
   if (!trimmed) return c.json({ error: "title is required" }, 400);
-  
+
   const boardId = c.req.param("boardId");
   const listId = c.req.param("listId");
+
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
+  const list = await findListDoc(boardId, listId);
+  if (!list) return c.json({ error: "List not found" }, 404);
+
   const cardId = randomUUID();
-  
   const cardDoc = emptyCard(cardId, boardId, listId, trimmed);
   const cardsCol = await getCardsCollection();
   await cardsCol.insertOne(cardDoc);
-  
+
   const listsCol = await getListsCollection();
   await listsCol.updateOne({ id: listId, boardId }, { $push: { cardIds: cardId } });
-  
+
   const updated = await getBoardData(boardId);
   return c.json(updated, 201);
 });
 
 app.patch("/boards/:boardId/cards/:cardId", async (c) => {
-  const patch = await c.req.json<Partial<Omit<CardDoc, "id" | "boardId" | "listId">>>();
+  const body = await c.req.json<Partial<Omit<CardDoc, "id" | "boardId" | "listId">>>();
   const boardId = c.req.param("boardId");
   const cardId = c.req.param("cardId");
-  
+
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
+  // Explicit allowlist — `c.req.json<T>()` is a compile-time-only cast, so without
+  // this, a raw request body could smuggle a `boardId`/`listId`/`_id` override
+  // straight into $set and corrupt the hand-rolled join across collections.
+  const set: Partial<Omit<CardDoc, "id" | "boardId" | "listId">> = {};
+  if (body.title !== undefined) set.title = body.title;
+  if (body.labelIds !== undefined) set.labelIds = body.labelIds;
+  if (body.memberIds !== undefined) set.memberIds = body.memberIds;
+  if (body.due !== undefined) set.due = body.due;
+  if (body.desc !== undefined) set.desc = body.desc;
+  if (body.checklist !== undefined) set.checklist = body.checklist;
+  if (body.comments !== undefined) set.comments = body.comments;
+
   const cardsCol = await getCardsCollection();
-  const result = await cardsCol.updateOne({ id: cardId, boardId }, { $set: patch });
+  const result = await cardsCol.updateOne({ id: cardId, boardId }, { $set: set });
   if (result.matchedCount === 0) return c.json({ error: "Card not found" }, 404);
-  
+
   const updated = await getBoardData(boardId);
   return c.json(updated);
 });
@@ -396,12 +490,16 @@ app.delete("/boards/:boardId/cards/:cardId", async (c) => {
   const boardId = c.req.param("boardId");
   const cardId = c.req.param("cardId");
 
-  const listsCol = await getListsCollection();
-  await listsCol.updateOne({ boardId, cardIds: cardId }, { $pull: { cardIds: cardId } });
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
 
+  const listsCol = await getListsCollection();
   const cardsCol = await getCardsCollection();
+
   const result = await cardsCol.deleteOne({ id: cardId, boardId });
   if (result.deletedCount === 0) return c.json({ error: "Card not found" }, 404);
+  await listsCol.updateOne({ boardId, cardIds: cardId }, { $pull: { cardIds: cardId } });
 
   const updated = await getBoardData(boardId);
   return c.json(updated);
@@ -410,16 +508,27 @@ app.delete("/boards/:boardId/cards/:cardId", async (c) => {
 app.post("/boards/:boardId/move-card", async (c) => {
   const { cardId, fromListId, toListId } = await c.req.json<{ cardId: string; fromListId: string; toListId: string }>();
   const boardId = c.req.param("boardId");
-  
+
+  const board = await findBoardDoc(boardId);
+  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (board.locked) return c.json({ error: "Board is locked" }, 403);
+
   const listsCol = await getListsCollection();
-  // Remove from source list
-  await listsCol.updateOne({ id: fromListId, boardId }, { $pull: { cardIds: cardId } });
-  // Add to dest list
+  // Remove from source list — only proceed if the card was actually there;
+  // otherwise this is a stale/duplicate request and must be a no-op, or the
+  // card would get pushed onto the destination list without ever having been
+  // removed from wherever it actually is, duplicating it across two lists.
+  const pulled = await listsCol.updateOne({ id: fromListId, boardId }, { $pull: { cardIds: cardId } });
+  if (pulled.modifiedCount === 0) {
+    const unchanged = await getBoardData(boardId);
+    return c.json(unchanged);
+  }
+
   await listsCol.updateOne({ id: toListId, boardId }, { $push: { cardIds: cardId } });
-  
+
   const cardsCol = await getCardsCollection();
   await cardsCol.updateOne({ id: cardId, boardId }, { $set: { listId: toListId } });
-  
+
   const updated = await getBoardData(boardId);
   return c.json(updated);
 });

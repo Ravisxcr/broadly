@@ -37,12 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roster, setRoster] = useState<Member[]>(() => DEFAULT_ROSTER.map((m) => ({ ...m })));
   const queryClient = useQueryClient();
 
-  const { data: session } = authClient.useSession();
+  const { data: session, refetch: refetchSession } = authClient.useSession();
   const { data: registeredUsers } = useQuery({ queryKey: ["members"], queryFn: fetchMembers });
 
-  const availableUsers = (registeredUsers ?? []).filter(
-    (u) => !roster.some((m) => m.email.toLowerCase() === u.email.toLowerCase())
-  );
+  // Dedup by id, not email: DEFAULT_ROSTER seed entries use decorative demo
+  // emails that a real registered account could legitimately share, and that
+  // must not hide the real account from being added/managed.
+  const availableUsers = (registeredUsers ?? []).filter((u) => !roster.some((m) => m.id === u.id));
 
   const currentUserId = session?.user?.id ?? null;
 
@@ -86,6 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       setRoster((r) => r.map((m) => (m.id === updatedUser.id ? { ...m, role: updatedUser.role } : m)));
+      // The role write goes straight to the `user` collection, bypassing Better
+      // Auth's own update flow, so nothing else tells this session to refetch.
+      // If an admin changed their own role, pick that up immediately instead of
+      // waiting for the next focus/visibility-triggered session refetch.
+      if (updatedUser.id === currentUserId) refetchSession();
     },
   });
 

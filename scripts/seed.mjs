@@ -110,12 +110,23 @@ function generateBoardData() {
 
 generateBoardData();
 
+const FORCE = process.argv.includes("--force") || process.argv.includes("--reset");
+
 async function seed() {
   try {
     await client.connect();
     console.log("Connected to MongoDB.");
 
     const db = client.db();
+
+    const existingBoards = await db.collection("boards").countDocuments();
+    if (existingBoards > 0 && !FORCE) {
+      console.log(
+        `Found ${existingBoards} existing board(s) — refusing to drop and reseed without --force. ` +
+          `Re-run as \`node scripts/seed.mjs --force\` if you really want to replace them.`
+      );
+      return;
+    }
 
     console.log("Dropping existing collections...");
     await db.collection("boards").drop().catch(() => {});

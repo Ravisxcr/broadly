@@ -22,6 +22,26 @@ if (process.env.NODE_ENV === "development") {
 
 const db = client.db();
 
+// Single-document counter used to decide admin assignment atomically — MongoDB
+// guarantees atomicity for operations on one document even without multi-document
+// transactions (unavailable on this standalone deployment, see `transaction: false`
+// below), so a $setOnInsert/$inc race on this one document is race-free while a
+// plain countDocuments()-then-write is not.
+const ADMIN_COUNT_ID = "adminCount";
+
+/** Atomically claims "first admin" status: at most one caller ever gets `true`. */
+async function claimFirstAdmin(): Promise<boolean> {
+  const meta = db.collection<{ _id: string; count: number }>("_meta");
+  const before = await meta.findOneAndUpdate(
+    { _id: ADMIN_COUNT_ID },
+    { $setOnInsert: { count: 1 } },
+    { upsert: true, returnDocument: "before" }
+  );
+  // `before` is null only when this call caused the upsert's insert — i.e. no
+  // adminCount document existed yet, so this is the very first admin.
+  return before === null;
+}
+
 // A provider with no client id can't authenticate against anything, so it's left
 // out of `socialProviders` entirely rather than registered with an empty clientId.
 const socialProviders: NonNullable<Parameters<typeof betterAuth>[0]["socialProviders"]> = {};
@@ -79,9 +99,10 @@ export const auth = betterAuth({
           // The very first account ever created becomes the sole admin;
           // everyone after that defaults to member. There is always exactly
           // one admin — later transfers happen atomically in the role-update
-          // route, not here.
-          const userCount = await db.collection("user").countDocuments();
-          return { data: { ...user, role: userCount === 0 ? "admin" : "member" } };
+          // route, not here. `claimFirstAdmin` uses a single-document atomic
+          // upsert so two concurrent first-time sign-ups can't both win.
+          const isFirstAdmin = await claimFirstAdmin();
+          return { data: { ...user, role: isFirstAdmin ? "admin" : "member" } };
         },
       },
     },

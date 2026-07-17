@@ -10,7 +10,7 @@ import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, availableUsers, addMember, removeMember, updateMemberRole } = useAuth();
+  const { roster, availableUsers, registeredUsers, addMember, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -23,6 +23,11 @@ export default function AdminView() {
       setRoleError(err instanceof Error ? err.message : "Failed to update role");
     }
   };
+
+  // DEFAULT_ROSTER seed entries aren't backed by a real Better Auth account (their
+  // ids are decorative demo strings, not Mongo ObjectIds), so the role-change API
+  // can never resolve them — only render the editable control for real accounts.
+  const isRealAccount = (userId: string) => registeredUsers.some((u) => u.id === userId);
 
   const handleAddMember = (userId: string) => {
     const user = availableUsers.find((u) => u.id === userId);
@@ -69,14 +74,23 @@ export default function AdminView() {
               <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
               <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
             </div>
-            <select
-              value={m.role}
-              onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
-              style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
+            {isRealAccount(m.id) ? (
+              <select
+                value={m.role}
+                onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
+                style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            ) : (
+              <div
+                title="Demo member — not a real account, so its role can't be changed here."
+                style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}
+              >
+                {m.role === "admin" ? "Admin" : "Member"}
+              </div>
+            )}
             {m.role !== "admin" && (
               <button
                 onClick={() => handleRemoveMember(m.id)}
