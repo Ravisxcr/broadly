@@ -78,6 +78,13 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       trustedProviders: enabledSocialProviders,
+      // Login is OAuth-only (no password flow), so there's no unverified local
+      // credential to protect against — every user's email already came from a
+      // trusted provider's callback. Without this, Better Auth also requires the
+      // *existing* local user's `emailVerified` to already be true before it will
+      // link a new trusted provider to that account, which blocks linking Google
+      // to accounts whose first-ever OAuth login (e.g. GitHub) left it false.
+      requireLocalEmailVerified: false,
     },
   },
   user: {
