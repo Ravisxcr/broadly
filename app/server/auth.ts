@@ -1,35 +1,25 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
-import clientPromise from "@/app/lib/mongodb";
-
-// Since Better Auth needs the DB instance synchronously or through a function,
-// we can await the clientPromise in a top-level await (if supported) or 
-// use a promise for the db. Wait, mongodbAdapter expects the db instance directly.
-// But betterAuth itself can be async or synchronous. Wait, `mongodbAdapter` expects a Db instance or a Promise<Db> in newer versions?
-// Let's create a client wrapper or just get the client.
-
-// To avoid top-level await issues, we can just pass the db promise if supported, 
-// or since MongoClient allows creating a db without waiting for connect, we can do this:
 import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI;
 if (!uri) throw new Error("MONGODB_URI is not set");
 
-// Create a new client instance for auth if we don't want to use the promise wrapper, 
-// or we can reuse the global one.
+// A separate MongoClient from app/lib/mongodb.ts's, since mongodbAdapter needs a
+// synchronous Db instance (the driver queues operations until connect() resolves,
+// so this is safe to use immediately without awaiting connect()).
 let client: MongoClient;
 if (process.env.NODE_ENV === "development") {
   if (!global._mongoClientPromise) {
     client = new MongoClient(uri);
     global._mongoClientPromise = client.connect();
   } else {
-    client = new MongoClient(uri); // fallback
+    client = new MongoClient(uri);
   }
 } else {
   client = new MongoClient(uri);
 }
 
-// We can just use a synchronous DB instance, MongoDB driver handles queuing until connected.
 const db = client.db();
 
 // A provider with no client id can't authenticate against anything, so it's left

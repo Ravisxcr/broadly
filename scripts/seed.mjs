@@ -9,18 +9,15 @@ if (!uri) {
 
 const client = new MongoClient(uri);
 
-const u1 = "f7b5392d-948a-4467-872e-33306b3a0110";
-const u2 = "a94025a1-7785-4089-a226-e414c5b3ab3b";
-const u3 = "84e8574e-6e4f-4d94-b152-32b0051e5e01";
-const u4 = "37a54917-8e67-42f5-b28e-324c08470a6c";
+// These ids match app/lib/trello/data.ts's DEFAULT_ROSTER — kept in sync so seeded
+// board/card memberIds resolve to the right name/avatar in the (frontend-only) demo
+// roster. They intentionally don't correspond to any real Better Auth `user` document;
+// membership here is decorative demo data, not an account you can sign in as.
+const u1 = "f7b5392d-948a-4467-872e-33306b3a0110"; // Ari
+const u2 = "a94025a1-7785-4089-a226-e414c5b3ab3b"; // Jess
+const u3 = "84e8574e-6e4f-4d94-b152-32b0051e5e01"; // Kim
+const u4 = "37a54917-8e67-42f5-b28e-324c08470a6c"; // Tomas
 const w1 = "d40a2bb8-c6bc-4bc9-a9c1-7cb4ff495147";
-
-const DEFAULT_ROSTER = [
-  { id: u1, initials: "AR", name: "Ari", email: "ari@studio.com", color: "#4F46E5", role: "admin", emailVerified: true, createdAt: new Date(), updatedAt: new Date() },
-  { id: u2, initials: "JS", name: "Jess", email: "jess@studio.com", color: "#EA580C", role: "member", emailVerified: true, createdAt: new Date(), updatedAt: new Date() },
-  { id: u3, initials: "KM", name: "Kim", email: "kim@studio.com", color: "#16A34A", role: "member", emailVerified: true, createdAt: new Date(), updatedAt: new Date() },
-  { id: u4, initials: "TN", name: "Tomas", email: "tomas@studio.com", color: "#9333EA", role: "member", emailVerified: true, createdAt: new Date(), updatedAt: new Date() },
-];
 
 const DEFAULT_WORKSPACES = [{ id: w1, name: "Boardly Studio", color: "#4F46E5", memberIds: [] }];
 
@@ -124,9 +121,10 @@ async function seed() {
     await db.collection("boards").drop().catch(() => {});
     await db.collection("lists").drop().catch(() => {});
     await db.collection("cards").drop().catch(() => {});
-    await db.collection("user").drop().catch(() => {});
     await db.collection("workspaces").drop().catch(() => {});
-    
+    // Deliberately not touching "user" — it's Better Auth's real account
+    // collection (real OAuth sign-ins, admin/member roles), not demo data.
+
     console.log("Seeding fresh data...");
 
     const boards = db.collection("boards");
@@ -140,10 +138,6 @@ async function seed() {
     const cards = db.collection("cards");
     await cards.insertMany(cardsToInsert);
     console.log(`Seeded ${cardsToInsert.length} cards.`);
-
-    const users = db.collection("user");
-    await users.insertMany(DEFAULT_ROSTER);
-    console.log("Seeded users (formerly members).");
 
     const workspaces = db.collection("workspaces");
     await workspaces.insertMany(DEFAULT_WORKSPACES);

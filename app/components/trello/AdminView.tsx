@@ -10,7 +10,7 @@ import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, availableUsers, registeredUsers, addMember, removeMember, updateMemberRole } = useAuth();
+  const { roster, availableUsers, addMember, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -53,7 +53,11 @@ export default function AdminView() {
     <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
     <div style={{ maxWidth: "85%", margin: "0 auto" }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Members</div>
-      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>People who can be invited onto boards in this workspace.</div>
+      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
+        People who can be invited onto boards in this workspace. There is always at least one admin, but there can be more than one — demoting the last remaining admin isn&apos;t allowed.
+      </div>
+
+      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
         {roster.map((m) => (
@@ -65,9 +69,14 @@ export default function AdminView() {
               <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
               <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}>
-              {m.role === "admin" ? "Admin" : "Member"}
-            </div>
+            <select
+              value={m.role}
+              onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
+              style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
             {m.role !== "admin" && (
               <button
                 onClick={() => handleRemoveMember(m.id)}
@@ -96,32 +105,6 @@ export default function AdminView() {
             </option>
           ))}
         </select>
-      </div>
-
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Account roles</div>
-      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
-        There is always exactly one admin. Promoting someone new automatically demotes the current admin to member.
-      </div>
-
-      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
-        {registeredUsers.map((u) => (
-          <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: `1px solid ${theme.border}`, borderRadius: 9, background: theme.panelBg }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
-              <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
-            </div>
-            <select
-              value={u.role}
-              onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-              style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-        ))}
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>

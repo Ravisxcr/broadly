@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { randomUUID } from "crypto";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/app/lib/mongodb";
-import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
+import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
 import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc, Role } from "@/app/lib/trello/types";
 import { auth, enabledSocialProviders } from "@/app/server/auth";
 
@@ -174,16 +174,15 @@ app.patch("/members/:userId/role", async (c) => {
   if (!target) return c.json({ error: "User not found" }, 404);
 
   if (role === "member") {
-    // There is always exactly one admin, so the current admin can only be
-    // demoted as a side effect of promoting someone else (below), never
-    // directly — otherwise the app would be left with none.
+    // There must always be at least one admin — block demoting the last one.
     if ((target.role ?? "member") === "admin") {
-      return c.json({ error: "There must always be one admin — promote another member to admin first" }, 400);
+      const adminCount = await usersCol.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return c.json({ error: "There must always be at least one admin — promote another member to admin first" }, 400);
+      }
     }
     await usersCol.updateOne({ _id: targetId }, { $set: { role: "member" } });
   } else {
-    // Promoting a new admin transfers the role away from whoever holds it.
-    await usersCol.updateMany({ role: "admin" }, { $set: { role: "member" } });
     await usersCol.updateOne({ _id: targetId }, { $set: { role: "admin" } });
   }
 

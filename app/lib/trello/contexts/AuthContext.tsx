@@ -85,14 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: (vars: { userId: string; role: Role }) => updateMemberRoleRequest(vars.userId, vars.role),
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
-      // Keep the roster's own Admin badge in sync: the target gets its new
-      // role, and — since there's only ever one admin — anyone else
-      // previously marked admin locally is demoted alongside them.
-      setRoster((r) =>
-        r.map((m) =>
-          m.id === updatedUser.id ? { ...m, role: updatedUser.role } : m.role === "admin" && updatedUser.role === "admin" ? { ...m, role: "member" } : m
-        )
-      );
+      setRoster((r) => r.map((m) => (m.id === updatedUser.id ? { ...m, role: updatedUser.role } : m)));
     },
   });
 
