@@ -11,6 +11,15 @@ export interface Member {
   role: Role;
 }
 
+/** A registered account from the auth provider, as returned by GET /api/members. */
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  role: Role;
+}
+
 export interface Label {
   id: string;
   color: string;
@@ -81,4 +90,26 @@ export interface ThemeColors {
   inputBg: string;
   accent: string;
   accentSubtle: string;
+}
+
+export interface CardDoc extends CardData {
+  boardId: string;
+  listId: string;
+}
+
+export interface ListDoc {
+  id: string;
+  boardId: string;
+  title: string;
+  cardIds: string[];
+}
+
+export interface BoardDoc {
+  id: string;
+  name: string;
+  cover: string;
+  memberIds: string[];
+  listIds: string[];
+  locked?: boolean;
+  workspaceId: string;
 }

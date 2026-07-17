@@ -1,4 +1,4 @@
-import type { BoardData, CardData, Member, WorkspaceData } from "./types";
+import type { AuthUser, BoardData, CardData, Role, WorkspaceData } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -16,8 +16,16 @@ export function fetchBoards(): Promise<BoardData[]> {
   return request<BoardData[]>("/api/boards");
 }
 
-export function fetchMembers(): Promise<Member[]> {
-  return request<Member[]>("/api/members");
+export function fetchMembers(): Promise<AuthUser[]> {
+  return request<AuthUser[]>("/api/members");
+}
+
+export function updateMemberRole(userId: string, role: Role): Promise<AuthUser> {
+  return request<AuthUser>(`/api/members/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+}
+
+export function fetchAuthProviders(): Promise<{ providers: string[] }> {
+  return request<{ providers: string[] }>("/api/auth-providers");
 }
 
 export function createBoard(input: { name: string; templateId: string; memberIds: string[]; workspaceId: string }): Promise<BoardData> {
@@ -70,4 +78,8 @@ export function updateCard(boardId: string, cardId: string, patch: Partial<Omit<
 
 export function moveCard(boardId: string, cardId: string, fromListId: string, toListId: string): Promise<BoardData> {
   return request<BoardData>(`/api/boards/${boardId}/move-card`, { method: "POST", body: JSON.stringify({ cardId, fromListId, toListId }) });
+}
+
+export function deleteCard(boardId: string, cardId: string): Promise<BoardData> {
+  return request<BoardData>(`/api/boards/${boardId}/cards/${cardId}`, { method: "DELETE" });
 }

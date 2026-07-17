@@ -37,6 +37,7 @@ interface BoardsContextValue {
   addCard(boardId: string, listId: string, title: string): void;
   updateCard(boardId: string, cardId: string, patch: CardPatch): void;
   moveCard(boardId: string, cardId: string, fromListId: string, toListId: string): void;
+  deleteCard(boardId: string, cardId: string): void;
   patchCardDebounced(boardId: string, cardId: string, patch: CardPatch): void;
 }
 
@@ -145,6 +146,24 @@ export function BoardsProvider({ children }: { children: ReactNode }) {
     onSuccess: (board) => replaceBoardInCache(queryClient, board),
   });
 
+  const deleteCardMutation = useMutation({
+    mutationFn: (vars: { boardId: string; cardId: string }) => api.deleteCard(vars.boardId, vars.cardId),
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ["boards"] });
+      const previous = queryClient.getQueryData<BoardData[]>(["boards"]);
+      queryClient.setQueryData<BoardData[]>(["boards"], (old) =>
+        old?.map((b) =>
+          b.id !== vars.boardId ? b : { ...b, lists: b.lists.map((l) => ({ ...l, cards: l.cards.filter((c) => c.id !== vars.cardId) })) }
+        )
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["boards"], context.previous);
+    },
+    onSuccess: (board) => replaceBoardInCache(queryClient, board),
+  });
+
   const patchCache = useCallback((boardId: string, cardId: string, patch: CardPatch) => patchCardInCache(queryClient, boardId, cardId, patch), [queryClient]);
   const mutateUpdateCard = useCallback((vars: { boardId: string; cardId: string; patch: CardPatch }) => updateCardMutation.mutate(vars), [updateCardMutation]);
   const patchCardDebounced = useDebouncedCardPatch(patchCache, mutateUpdateCard);
@@ -167,6 +186,7 @@ export function BoardsProvider({ children }: { children: ReactNode }) {
     (boardId: string, cardId: string, fromListId: string, toListId: string) => moveCardMutation.mutate({ boardId, cardId, fromListId, toListId }),
     [moveCardMutation]
   );
+  const deleteCard = useCallback((boardId: string, cardId: string) => deleteCardMutation.mutate({ boardId, cardId }), [deleteCardMutation]);
 
   const boardsRefetch = boardsQuery.refetch;
   const refetch = useCallback(() => {
@@ -189,6 +209,7 @@ export function BoardsProvider({ children }: { children: ReactNode }) {
       addCard,
       updateCard,
       moveCard,
+      deleteCard,
       patchCardDebounced,
     }),
     [
@@ -205,6 +226,7 @@ export function BoardsProvider({ children }: { children: ReactNode }) {
       addCard,
       updateCard,
       moveCard,
+      deleteCard,
       patchCardDebounced,
     ]
   );

@@ -31,7 +31,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { currentUserId, roster } = useAuth();
+  const { currentUserId, isAdmin } = useAuth();
   const { boards, isLoading: boardsLoading } = useBoards();
   const { workspaces, isLoading: workspacesLoading } = useWorkspaces();
 
@@ -55,7 +55,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     router,
     skipUrlSyncRef,
     currentUserId,
-    roster,
+    isAdmin,
     boards,
     workspaces,
     boardsLoading,

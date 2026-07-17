@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { Check, Lock, Plus, X } from "lucide-react";
+import { Check, Lock, Plus, Trash2, X } from "lucide-react";
 import { LABEL_PALETTE, findCard, labelById, memberById } from "../../lib/trello/data";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
@@ -12,7 +12,7 @@ import type { Member } from "../../lib/trello/types";
 export default function CardModal() {
   const { theme } = useTheme();
   const { roster, currentUser } = useAuth();
-  const { boards, updateCard, patchCardDebounced } = useBoards();
+  const { boards, updateCard, patchCardDebounced, deleteCard } = useBoards();
   const { activeBoardId, selectedCardId, selectedListId, closeCard } = useNavigation();
 
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
@@ -75,6 +75,12 @@ export default function CardModal() {
     updateCard(board.id, card.id, { comments });
   };
 
+  const handleDeleteCard = () => {
+    if (!window.confirm("Delete this card? This can't be undone.")) return;
+    deleteCard(board.id, card.id);
+    closeCard();
+  };
+
   const stopProp = (e: MouseEvent) => e.stopPropagation();
   const labels = card.labelIds.map(labelById).filter((l): l is NonNullable<typeof l> => Boolean(l));
   const members = card.memberIds.map((id) => memberById(roster, id)).filter((m): m is Member => Boolean(m));
@@ -106,6 +112,15 @@ export default function CardModal() {
               style={{ width: "100%", fontSize: 17, fontWeight: 800, border: "none", resize: "none", fontFamily: "inherit", padding: "2px 4px", borderRadius: 6, background: "transparent", color: theme.text }}
             />
           </div>
+          {!locked && (
+            <button
+              onClick={handleDeleteCard}
+              title="Delete card"
+              style={{ width: 28, height: 28, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: "#E11D48", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
           <button
             onClick={closeCard}
             style={{ width: 28, height: 28, border: "none", background: theme.subtleBg, borderRadius: 7, cursor: "pointer", color: theme.textSecondary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}

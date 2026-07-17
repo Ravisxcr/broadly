@@ -10,10 +10,10 @@ export const LABEL_PALETTE: Label[] = [
 ];
 
 export const DEFAULT_ROSTER: Member[] = [
-  { id: "u1", initials: "AR", name: "Ari", email: "ari@studio.com", color: "#4F46E5", role: "admin" },
-  { id: "u2", initials: "JS", name: "Jess", email: "jess@studio.com", color: "#EA580C", role: "member" },
-  { id: "u3", initials: "KM", name: "Kim", email: "kim@studio.com", color: "#16A34A", role: "member" },
-  { id: "u4", initials: "TN", name: "Tomas", email: "tomas@studio.com", color: "#9333EA", role: "member" },
+  { id: "f7b5392d-948a-4467-872e-33306b3a0110", initials: "AR", name: "Ari", email: "ari@studio.com", color: "#4F46E5", role: "admin" },
+  { id: "a94025a1-7785-4089-a226-e414c5b3ab3b", initials: "JS", name: "Jess", email: "jess@studio.com", color: "#EA580C", role: "member" },
+  { id: "84e8574e-6e4f-4d94-b152-32b0051e5e01", initials: "KM", name: "Kim", email: "kim@studio.com", color: "#16A34A", role: "member" },
+  { id: "37a54917-8e67-42f5-b28e-324c08470a6c", initials: "TN", name: "Tomas", email: "tomas@studio.com", color: "#9333EA", role: "member" },
 ];
 
 export const AVATAR_COLORS = ["#4F46E5", "#EA580C", "#16A34A", "#9333EA", "#0891B2", "#DB2777"];
@@ -22,7 +22,7 @@ export const BOARD_COVERS = ["#3B82F6", "#EA580C", "#9333EA", "#16A34A", "#47556
 
 export const WORKSPACE_COLORS = ["#4F46E5", "#0891B2", "#16A34A", "#DB2777", "#EA580C", "#475569"];
 
-export const DEFAULT_WORKSPACES: WorkspaceData[] = [{ id: "w1", name: "Boardly Studio", color: "#4F46E5", memberIds: [] }];
+export const DEFAULT_WORKSPACES: WorkspaceData[] = [{ id: "d40a2bb8-c6bc-4bc9-a9c1-7cb4ff495147", name: "Boardly Studio", color: "#4F46E5", memberIds: [] }];
 
 export function groupByWorkspace(boards: BoardData[], workspaces: WorkspaceData[]): { workspace: WorkspaceData; boards: BoardData[] }[] {
   return workspaces.map((workspace) => ({ workspace, boards: boards.filter((b) => b.workspaceId === workspace.id) }));

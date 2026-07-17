@@ -6,21 +6,32 @@ import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
+import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, inviteMember, removeMember } = useAuth();
+  const { roster, availableUsers, registeredUsers, addMember, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
+  const [roleError, setRoleError] = useState<string | null>(null);
 
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const handleRoleChange = async (userId: string, role: Role) => {
+    setRoleError(null);
+    try {
+      await updateMemberRole(userId, role);
+    } catch (err) {
+      setRoleError(err instanceof Error ? err.message : "Failed to update role");
+    }
+  };
 
-  const handleInviteMember = () => {
-    if (!inviteName.trim()) return;
-    inviteMember(inviteName, inviteEmail);
-    setInviteName("");
-    setInviteEmail("");
+  // DEFAULT_ROSTER seed entries aren't backed by a real Better Auth account (their
+  // ids are decorative demo strings, not Mongo ObjectIds), so the role-change API
+  // can never resolve them — only render the editable control for real accounts.
+  const isRealAccount = (userId: string) => registeredUsers.some((u) => u.id === userId);
+
+  const handleAddMember = (userId: string) => {
+    const user = availableUsers.find((u) => u.id === userId);
+    if (user) addMember(user);
   };
 
   const handleRemoveMember = (userId: string) => {
@@ -47,7 +58,11 @@ export default function AdminView() {
     <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
     <div style={{ maxWidth: "85%", margin: "0 auto" }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Members</div>
-      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>People who can be invited onto boards in this workspace.</div>
+      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
+        People who can be invited onto boards in this workspace. There is always at least one admin, but there can be more than one — demoting the last remaining admin isn&apos;t allowed.
+      </div>
+
+      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
         {roster.map((m) => (
@@ -59,9 +74,23 @@ export default function AdminView() {
               <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
               <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}>
-              {m.role === "admin" ? "Admin" : "Member"}
-            </div>
+            {isRealAccount(m.id) ? (
+              <select
+                value={m.role}
+                onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
+                style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            ) : (
+              <div
+                title="Demo member — not a real account, so its role can't be changed here."
+                style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}
+              >
+                {m.role === "admin" ? "Admin" : "Member"}
+              </div>
+            )}
             {m.role !== "admin" && (
               <button
                 onClick={() => handleRemoveMember(m.id)}
@@ -74,25 +103,22 @@ export default function AdminView() {
         ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
-        <input
-          value={inviteName}
-          onChange={(e) => setInviteName(e.target.value)}
-          placeholder="Name"
-          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-        />
-        <input
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          placeholder="Email"
-          style={{ flex: "1 1 140px", minWidth: 0, padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-        />
-        <button
-          onClick={handleInviteMember}
-          style={{ flexShrink: 0, padding: "9px 18px", background: "#4F46E5", color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}
+      <div style={{ marginBottom: 32 }}>
+        <select
+          value=""
+          onChange={(e) => handleAddMember(e.target.value)}
+          disabled={availableUsers.length === 0}
+          style={{ width: "100%", padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
         >
-          Invite
-        </button>
+          <option value="" disabled>
+            {availableUsers.length === 0 ? "No registered users available to add" : "Add a registered user…"}
+          </option>
+          {availableUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name} ({u.email})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>
