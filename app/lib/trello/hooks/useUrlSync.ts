@@ -3,7 +3,7 @@
 import { useEffect, type MutableRefObject } from "react";
 import { canAccessBoard, findCardListId } from "../data";
 import { buildUrl, parseUrlTarget } from "../url";
-import type { BoardData, Member, WorkspaceData } from "../types";
+import type { BoardData, WorkspaceData } from "../types";
 
 export interface NavState {
   view: "dashboard" | "board" | "admin";
@@ -22,7 +22,7 @@ interface UseUrlSyncParams {
   router: UrlSyncRouter;
   skipUrlSyncRef: MutableRefObject<boolean>;
   currentUserId: string | null;
-  roster: Member[];
+  isAdmin: boolean;
   boards: BoardData[];
   workspaces: WorkspaceData[];
   boardsLoading: boolean;
@@ -41,7 +41,7 @@ export function useUrlSync(params: UseUrlSyncParams): void {
     router,
     skipUrlSyncRef,
     currentUserId,
-    roster,
+    isAdmin,
     boards,
     workspaces,
     boardsLoading,
@@ -59,10 +59,9 @@ export function useUrlSync(params: UseUrlSyncParams): void {
     if (boardsLoading || workspacesLoading) return;
 
     const target = parseUrlTarget(pathname, searchParams);
-    const isAdminUser = roster.find((m) => m.id === currentUserId)?.role === "admin";
 
     if (target.view === "admin") {
-      if (!isAdminUser) {
+      if (!isAdmin) {
         router.replace(buildUrl("dashboard", null, null));
         return;
       }
@@ -72,7 +71,7 @@ export function useUrlSync(params: UseUrlSyncParams): void {
 
     if (target.view === "board" && target.boardId) {
       const board = boards.find((b) => b.id === target.boardId);
-      if (!board || !canAccessBoard(board, workspaces, currentUserId, isAdminUser)) {
+      if (!board || !canAccessBoard(board, workspaces, currentUserId, isAdmin)) {
         router.replace(buildUrl("dashboard", null, null));
         return;
       }
@@ -102,7 +101,7 @@ export function useUrlSync(params: UseUrlSyncParams): void {
     boardsLoading,
     workspacesLoading,
     currentUserId,
-    roster,
+    isAdmin,
     navState.view,
     navState.activeBoardId,
     navState.selectedCardId,

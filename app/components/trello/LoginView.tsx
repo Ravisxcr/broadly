@@ -24,32 +24,32 @@ export default function LoginView() {
         <div style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 28 }}>Continue with one of the providers below.</div>
 
         {providers.length > 0 ? (
-          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {providers.includes("github") && (
               <button
                 onClick={() => authClient.signIn.social({ provider: "github" })}
-                title="Log in with GitHub"
-                style={{ width: 44, height: 44, background: "#24292e", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: "100%", height: 44, background: "#24292e", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600 }}
               >
-                <FaGithub size={20} />
+                <FaGithub size={18} />
+                Continue with GitHub
               </button>
             )}
             {providers.includes("google") && (
               <button
                 onClick={() => authClient.signIn.social({ provider: "google" })}
-                title="Log in with Google"
-                style={{ width: 44, height: 44, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: "100%", height: 44, background: theme.panelBg, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600 }}
               >
-                <FcGoogle size={20} />
+                <FcGoogle size={18} />
+                Continue with Google
               </button>
             )}
             {providers.includes("microsoft") && (
               <button
                 onClick={() => authClient.signIn.social({ provider: "microsoft" })}
-                title="Log in with Microsoft"
-                style={{ width: 44, height: 44, background: theme.panelBg, border: `1px solid ${theme.border}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#00a4ef" }}
+                style={{ width: "100%", height: 44, background: theme.panelBg, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600 }}
               >
-                <FaMicrosoft size={20} />
+                <FaMicrosoft size={18} color="#00a4ef" />
+                Continue with Microsoft
               </button>
             )}
           </div>

@@ -1,16 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { X } from "lucide-react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
+import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, availableUsers, addMember, removeMember } = useAuth();
+  const { roster, availableUsers, registeredUsers, addMember, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const handleRoleChange = async (userId: string, role: Role) => {
+    setRoleError(null);
+    try {
+      await updateMemberRole(userId, role);
+    } catch (err) {
+      setRoleError(err instanceof Error ? err.message : "Failed to update role");
+    }
+  };
 
   const handleAddMember = (userId: string) => {
     const user = availableUsers.find((u) => u.id === userId);
@@ -84,6 +96,32 @@ export default function AdminView() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Account roles</div>
+      <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
+        There is always exactly one admin. Promoting someone new automatically demotes the current admin to member.
+      </div>
+
+      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
+        {registeredUsers.map((u) => (
+          <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: `1px solid ${theme.border}`, borderRadius: 9, background: theme.panelBg }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
+              <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
+            </div>
+            <select
+              value={u.role}
+              onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
+              style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        ))}
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>

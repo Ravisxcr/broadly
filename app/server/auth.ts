@@ -59,12 +59,41 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
 export const enabledSocialProviders = Object.keys(socialProviders) as Array<keyof typeof socialProviders>;
 
 export const auth = betterAuth({
-  // Multi-document transactions require a replica set, which a plain local
-  // mongod doesn't provide. Disable them rather than requiring rs.initiate()
-  // for local dev.
   database: mongodbAdapter(db, {
     client: client,
     transaction: false,
   }),
   socialProviders,
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: enabledSocialProviders,
+    },
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: false,
+        // Never client-supplied — assigned server-side by the create hook below,
+        // or changed later via the admin-only PATCH /api/members/:userId/role.
+        input: false,
+        defaultValue: "member",
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          // The very first account ever created becomes the sole admin;
+          // everyone after that defaults to member. There is always exactly
+          // one admin — later transfers happen atomically in the role-update
+          // route, not here.
+          const userCount = await db.collection("user").countDocuments();
+          return { data: { ...user, role: userCount === 0 ? "admin" : "member" } };
+        },
+      },
+    },
+  },
 });

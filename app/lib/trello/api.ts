@@ -1,4 +1,4 @@
-import type { AuthUser, BoardData, CardData, WorkspaceData } from "./types";
+import type { AuthUser, BoardData, CardData, Role, WorkspaceData } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -18,6 +18,10 @@ export function fetchBoards(): Promise<BoardData[]> {
 
 export function fetchMembers(): Promise<AuthUser[]> {
   return request<AuthUser[]>("/api/members");
+}
+
+export function updateMemberRole(userId: string, role: Role): Promise<AuthUser> {
+  return request<AuthUser>(`/api/members/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
 }
 
 export function fetchAuthProviders(): Promise<{ providers: string[] }> {

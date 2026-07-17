@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/app/lib/mongodb";
 import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_ROSTER, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
-import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc } from "@/app/lib/trello/types";
+import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc, Role } from "@/app/lib/trello/types";
 import { auth, enabledSocialProviders } from "@/app/server/auth";
 
 // better-auth's mongo adapter stores the user id as the Mongo `_id` (an ObjectId) and
@@ -12,6 +12,7 @@ interface UserDoc {
   name: string;
   email: string;
   image?: string | null;
+  role?: Role;
 }
 
 const app = new Hono().basePath("/api");
@@ -147,9 +148,48 @@ app.get("/boards", async (c) => {
 
 app.get("/members", async (c) => {
   const collection = await getUsersCollection();
-  const users = await collection.find({}, { projection: { name: 1, email: 1, image: 1 } }).toArray();
-  const authUsers: AuthUser[] = users.map((u) => ({ id: u._id.toString(), name: u.name, email: u.email, image: u.image ?? null }));
+  const users = await collection.find({}, { projection: { name: 1, email: 1, image: 1, role: 1 } }).toArray();
+  const authUsers: AuthUser[] = users.map((u) => ({ id: u._id.toString(), name: u.name, email: u.email, image: u.image ?? null, role: u.role ?? "member" }));
   return c.json(authUsers);
+});
+
+app.patch("/members/:userId/role", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return c.json({ error: "Not authenticated" }, 401);
+  const requesterRole = (session.user.role as Role | undefined) ?? "member";
+  if (requesterRole !== "admin") return c.json({ error: "Admin access required" }, 403);
+
+  const { role } = await c.req.json<{ role?: Role }>();
+  if (role !== "admin" && role !== "member") return c.json({ error: "role must be 'admin' or 'member'" }, 400);
+
+  let targetId: ObjectId;
+  try {
+    targetId = new ObjectId(c.req.param("userId"));
+  } catch {
+    return c.json({ error: "Invalid user id" }, 400);
+  }
+
+  const usersCol = await getUsersCollection();
+  const target = await usersCol.findOne({ _id: targetId });
+  if (!target) return c.json({ error: "User not found" }, 404);
+
+  if (role === "member") {
+    // There is always exactly one admin, so the current admin can only be
+    // demoted as a side effect of promoting someone else (below), never
+    // directly — otherwise the app would be left with none.
+    if ((target.role ?? "member") === "admin") {
+      return c.json({ error: "There must always be one admin — promote another member to admin first" }, 400);
+    }
+    await usersCol.updateOne({ _id: targetId }, { $set: { role: "member" } });
+  } else {
+    // Promoting a new admin transfers the role away from whoever holds it.
+    await usersCol.updateMany({ role: "admin" }, { $set: { role: "member" } });
+    await usersCol.updateOne({ _id: targetId }, { $set: { role: "admin" } });
+  }
+
+  const updated = await usersCol.findOne({ _id: targetId });
+  const authUser: AuthUser = { id: updated!._id.toString(), name: updated!.name, email: updated!.email, image: updated!.image ?? null, role: updated!.role ?? "member" };
+  return c.json(authUser);
 });
 
 app.get("/workspaces", async (c) => {
