@@ -7,6 +7,7 @@ import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
 import type { BoardData, Member, ThemeColors } from "../../lib/trello/types";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 interface BoardCardProps {
   board: BoardData;
@@ -22,6 +23,7 @@ export default function BoardCard({ board }: BoardCardProps) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(board.name);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const stopProp = (e: MouseEvent) => e.stopPropagation();
 
@@ -44,10 +46,10 @@ export default function BoardCard({ board }: BoardCardProps) {
   };
 
   const handleDelete = () => {
-    if (!window.confirm("Delete this board? This can't be undone.")) return;
     setMenuOpen(false);
-    deleteBoard(board.id);
+    setConfirmingDelete(true);
   };
+  const confirmDelete = () => deleteBoard(board.id);
 
   return (
     <div
@@ -90,6 +92,16 @@ export default function BoardCard({ board }: BoardCardProps) {
             </>
           )}
           {infoOpen && <BoardInfoPanel theme={theme} board={board} roster={roster} onClose={() => setInfoOpen(false)} />}
+          <div onClick={stopProp}>
+            <ConfirmDeleteDialog
+              open={confirmingDelete}
+              onOpenChange={setConfirmingDelete}
+              title="Delete this board?"
+              description={`"${board.name}" and all of its lists and cards will be permanently deleted. This can't be undone.`}
+              confirmLabel="Delete board"
+              onConfirm={confirmDelete}
+            />
+          </div>
         </div>
       )}
       {board.locked && <div style={{ position: "absolute", top: 10, left: 12, color: "#fff", display: "flex" }}><Lock size={13} /></div>}

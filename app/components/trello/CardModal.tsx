@@ -8,6 +8,7 @@ import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
 import type { Member } from "../../lib/trello/types";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function CardModal() {
   const { theme } = useTheme();
@@ -19,6 +20,7 @@ export default function CardModal() {
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [confirmingDeleteCard, setConfirmingDeleteCard] = useState(false);
 
   const board = boards.find((b) => b.id === activeBoardId) ?? null;
   const card = activeBoardId && selectedCardId ? findCard(boards, activeBoardId, selectedCardId) : null;
@@ -75,8 +77,8 @@ export default function CardModal() {
     updateCard(board.id, card.id, { comments });
   };
 
-  const handleDeleteCard = () => {
-    if (!window.confirm("Delete this card? This can't be undone.")) return;
+  const handleDeleteCard = () => setConfirmingDeleteCard(true);
+  const confirmDeleteCard = () => {
     deleteCard(board.id, card.id);
     closeCard();
   };
@@ -128,6 +130,15 @@ export default function CardModal() {
             <X size={15} />
           </button>
         </div>
+
+        <ConfirmDeleteDialog
+          open={confirmingDeleteCard}
+          onOpenChange={setConfirmingDeleteCard}
+          title="Delete this card?"
+          description={`"${card.title}" will be permanently deleted. This can't be undone.`}
+          confirmLabel="Delete card"
+          onConfirm={confirmDeleteCard}
+        />
 
         <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {/* labels + members + due date */}

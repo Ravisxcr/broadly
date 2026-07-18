@@ -10,6 +10,7 @@ import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
 import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 const WORKSPACE_MENU_HEIGHT = 84;
 
@@ -30,6 +31,7 @@ export default function Sidebar({ onOpenCreateBoard, onOpenCreateWorkspace }: Si
   const workspaceMenu = useAnchoredMenu();
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
   const [editingWorkspaceNameValue, setEditingWorkspaceNameValue] = useState("");
+  const [deletingWorkspace, setDeletingWorkspace] = useState<{ id: string; name: string } | null>(null);
 
   const stopProp = (e: MouseEvent) => e.stopPropagation();
 
@@ -50,14 +52,17 @@ export default function Sidebar({ onOpenCreateBoard, onOpenCreateWorkspace }: Si
     updateWorkspace(workspaceId, { name });
   };
 
-  const handleDeleteWorkspace = (workspaceId: string) => {
+  const handleDeleteWorkspace = (workspaceId: string, workspaceName: string) => {
     workspaceMenu.close();
     if (boards.some((b) => b.workspaceId === workspaceId)) {
       window.alert("Move or delete its boards first.");
       return;
     }
-    if (!window.confirm("Delete this workspace? This can't be undone.")) return;
-    deleteWorkspace(workspaceId);
+    setDeletingWorkspace({ id: workspaceId, name: workspaceName });
+  };
+  const confirmDeleteWorkspace = () => {
+    if (!deletingWorkspace) return;
+    deleteWorkspace(deletingWorkspace.id);
   };
 
   return (
@@ -246,13 +251,21 @@ export default function Sidebar({ onOpenCreateBoard, onOpenCreateWorkspace }: Si
                                 Rename workspace
                               </div>
                               <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
-                              <div onClick={() => handleDeleteWorkspace(workspace.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                              <div onClick={() => handleDeleteWorkspace(workspace.id, workspace.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
                                 Delete workspace
                               </div>
                             </div>
                           </>,
                           document.body
                         )}
+                      <ConfirmDeleteDialog
+                        open={deletingWorkspace?.id === workspace.id}
+                        onOpenChange={(open) => !open && setDeletingWorkspace(null)}
+                        title="Delete this workspace?"
+                        description={`"${workspace.name}" will be permanently deleted. This can't be undone.`}
+                        confirmLabel="Delete workspace"
+                        onConfirm={confirmDeleteWorkspace}
+                      />
                     </div>
                   )}
                 </div>

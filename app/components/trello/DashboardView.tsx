@@ -11,6 +11,7 @@ import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
 import BoardCard from "./BoardCard";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 const WORKSPACE_MENU_HEIGHT = 84;
 
@@ -29,6 +30,7 @@ export default function DashboardView({ onOpenCreateBoard, onOpenCreateWorkspace
   const workspaceMenu = useAnchoredMenu();
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
   const [editingWorkspaceNameValue, setEditingWorkspaceNameValue] = useState("");
+  const [deletingWorkspace, setDeletingWorkspace] = useState<{ id: string; name: string } | null>(null);
 
   const startEditWorkspaceName = (workspaceId: string, currentName: string) => {
     setEditingWorkspaceId(workspaceId);
@@ -44,14 +46,17 @@ export default function DashboardView({ onOpenCreateBoard, onOpenCreateWorkspace
     updateWorkspace(workspaceId, { name });
   };
 
-  const handleDeleteWorkspace = (workspaceId: string) => {
+  const handleDeleteWorkspace = (workspaceId: string, workspaceName: string) => {
     workspaceMenu.close();
     if (allBoards.some((b) => b.workspaceId === workspaceId)) {
       window.alert("Move or delete its boards first.");
       return;
     }
-    if (!window.confirm("Delete this workspace? This can't be undone.")) return;
-    deleteWorkspace(workspaceId);
+    setDeletingWorkspace({ id: workspaceId, name: workspaceName });
+  };
+  const confirmDeleteWorkspace = () => {
+    if (!deletingWorkspace) return;
+    deleteWorkspace(deletingWorkspace.id);
   };
 
   const groups = groupByWorkspace(visibleBoards, workspaces).filter(({ boards: wsBoards }) => isAdmin || wsBoards.length > 0);
@@ -116,13 +121,21 @@ export default function DashboardView({ onOpenCreateBoard, onOpenCreateWorkspace
                             Rename workspace
                           </div>
                           <div style={{ height: 1, background: theme.border, margin: "4px 2px" }} />
-                          <div onClick={() => handleDeleteWorkspace(workspace.id)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
+                          <div onClick={() => handleDeleteWorkspace(workspace.id, workspace.name)} style={{ padding: "8px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#E11D48" }}>
                             Delete workspace
                           </div>
                         </div>
                       </>,
                       document.body
                     )}
+                  <ConfirmDeleteDialog
+                    open={deletingWorkspace?.id === workspace.id}
+                    onOpenChange={(open) => !open && setDeletingWorkspace(null)}
+                    title="Delete this workspace?"
+                    description={`"${workspace.name}" will be permanently deleted. This can't be undone.`}
+                    confirmLabel="Delete workspace"
+                    onConfirm={confirmDeleteWorkspace}
+                  />
                 </div>
               )}
             </div>
