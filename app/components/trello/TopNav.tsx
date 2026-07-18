@@ -6,6 +6,7 @@ import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function TopNav() {
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -19,6 +20,7 @@ export default function TopNav() {
   const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [editingBoardName, setEditingBoardName] = useState(false);
   const [editingBoardNameValue, setEditingBoardNameValue] = useState("");
+  const [confirmingDeleteBoard, setConfirmingDeleteBoard] = useState(false);
 
   const dark = themeMode === "dark";
   const isLight = themeMode === "light";
@@ -56,8 +58,11 @@ export default function TopNav() {
 
   const handleDeleteBoard = () => {
     if (!activeBoard) return;
-    if (!window.confirm("Delete this board? This can't be undone.")) return;
     setBoardMenuOpen(false);
+    setConfirmingDeleteBoard(true);
+  };
+  const confirmDeleteBoard = () => {
+    if (!activeBoard) return;
     goToDashboard();
     deleteBoard(activeBoard.id);
   };
@@ -125,6 +130,14 @@ export default function TopNav() {
                   </div>
                 </>
               )}
+              <ConfirmDeleteDialog
+                open={confirmingDeleteBoard}
+                onOpenChange={setConfirmingDeleteBoard}
+                title="Delete this board?"
+                description={activeBoard ? `"${activeBoard.name}" and all of its lists and cards will be permanently deleted. This can't be undone.` : ""}
+                confirmLabel="Delete board"
+                onConfirm={confirmDeleteBoard}
+              />
             </div>
           )}
         </>

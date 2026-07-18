@@ -58,7 +58,7 @@ export default function BoardView() {
   return (
     <div style={{ flex: 1, overflowY: "hidden", display: "flex", flexDirection: "column", background: theme.bgApp }}>
       {locked && (
-        <div style={{ padding: "8px 20px", fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderBottom: "1px solid #FDE68A", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ padding: "8px 20px", fontSize: 12.5, fontWeight: 700, color: theme.warningText, background: theme.warningBg, borderBottom: `1px solid ${theme.warningBorder}`, display: "flex", alignItems: "center", gap: 6 }}>
           <Lock size={13} /> This board is locked — editing is disabled.
         </div>
       )}

@@ -6,28 +6,49 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "knip": "knip",
+    "secretlint": "secretlint \"**/*\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx}": [
+      "eslint --fix"
+    ],
+    "*": [
+      "secretlint"
+    ]
   },
   "dependencies": {
     "@better-auth/mongo-adapter": "^1.6.23",
+    "@radix-ui/react-alert-dialog": "^1.1.19",
+    "@radix-ui/react-toast": "^1.2.19",
     "@tanstack/react-query": "^5.101.2",
     "better-auth": "^1.6.23",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "hono": "^4.12.30",
     "lucide-react": "^1.24.0",
     "mongodb": "^7.5.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-icons": "^5.7.0"
+    "react-icons": "^5.7.0",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@secretlint/secretlint-rule-no-dotenv": "^13.0.2",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
-    "playwright": "^1.61.1",
+    "husky": "^9.1.7",
+    "knip": "^6.27.0",
+    "lint-staged": "^17.0.8",
+    "secretlint": "^13.0.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

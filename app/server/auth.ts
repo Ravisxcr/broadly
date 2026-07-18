@@ -5,6 +5,12 @@ import { MongoClient } from "mongodb";
 const uri = process.env.MONGODB_URI;
 if (!uri) throw new Error("MONGODB_URI is not set");
 
+// Read explicitly rather than relying on a path segment in MONGODB_URI:
+// Atlas-style mongodb+srv:// URIs carry no database name, so `client.db()`
+// with no argument would throw.
+const dbName = process.env.MONGODB_DB;
+if (!dbName) throw new Error("MONGODB_DB is not set");
+
 // A separate MongoClient from app/lib/mongodb.ts's, since mongodbAdapter needs a
 // synchronous Db instance (the driver queues operations until connect() resolves,
 // so this is safe to use immediately without awaiting connect()).
@@ -20,7 +26,7 @@ if (process.env.NODE_ENV === "development") {
   client = new MongoClient(uri);
 }
 
-const db = client.db();
+const db = client.db(dbName);
 
 // Single-document counter used to decide admin assignment atomically — MongoDB
 // guarantees atomicity for operations on one document even without multi-document

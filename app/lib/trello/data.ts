@@ -9,13 +9,6 @@ export const LABEL_PALETTE: Label[] = [
   { id: "l6", color: "#06B6D4", name: "Sky" },
 ];
 
-export const DEFAULT_ROSTER: Member[] = [
-  { id: "f7b5392d-948a-4467-872e-33306b3a0110", initials: "AR", name: "Ari", email: "ari@studio.com", color: "#4F46E5", role: "admin" },
-  { id: "a94025a1-7785-4089-a226-e414c5b3ab3b", initials: "JS", name: "Jess", email: "jess@studio.com", color: "#EA580C", role: "member" },
-  { id: "84e8574e-6e4f-4d94-b152-32b0051e5e01", initials: "KM", name: "Kim", email: "kim@studio.com", color: "#16A34A", role: "member" },
-  { id: "37a54917-8e67-42f5-b28e-324c08470a6c", initials: "TN", name: "Tomas", email: "tomas@studio.com", color: "#9333EA", role: "member" },
-];
-
 export const AVATAR_COLORS = ["#4F46E5", "#EA580C", "#16A34A", "#9333EA", "#0891B2", "#DB2777"];
 
 export const BOARD_COVERS = ["#3B82F6", "#EA580C", "#9333EA", "#16A34A", "#475569", "#E11D48"];
@@ -80,5 +73,11 @@ export function getThemeColors(dark: boolean): ThemeColors {
     inputBg: dark ? "#1A1B21" : "#FAFAF9",
     accent: "#4F46E5",
     accentSubtle: dark ? "rgba(79,70,229,0.28)" : "#EEF2FF",
+    warningBg: dark ? "rgba(217,119,6,0.18)" : "#FEF3C7",
+    warningBorder: dark ? "rgba(217,119,6,0.4)" : "#FDE68A",
+    warningText: dark ? "#FBBF24" : "#92400E",
+    dangerBg: dark ? "rgba(225,29,72,0.18)" : "#FEF2F2",
+    dangerBorder: dark ? "rgba(225,29,72,0.4)" : "#FCA5A5",
+    dangerText: dark ? "#FB7185" : "#991B1B",
   };
 }

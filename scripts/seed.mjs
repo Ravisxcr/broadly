@@ -7,6 +7,12 @@ if (!uri) {
   process.exit(1);
 }
 
+const dbName = process.env.MONGODB_DB;
+if (!dbName) {
+  console.error("MONGODB_DB is not set. Use --env-file=.env or run with Bun.");
+  process.exit(1);
+}
+
 const client = new MongoClient(uri);
 
 // These ids match app/lib/trello/data.ts's DEFAULT_ROSTER — kept in sync so seeded
@@ -117,7 +123,7 @@ async function seed() {
     await client.connect();
     console.log("Connected to MongoDB.");
 
-    const db = client.db();
+    const db = client.db(dbName);
 
     const existingBoards = await db.collection("boards").countDocuments();
     if (existingBoards > 0 && !FORCE) {

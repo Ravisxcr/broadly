@@ -1,38 +1,31 @@
 "use client";
 
-import { useState } from "react";
 import { X } from "lucide-react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
+import { useToast } from "../ui/use-toast";
 import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
   const { theme } = useTheme();
-  const { roster, availableUsers, registeredUsers, addMember, removeMember, updateMemberRole } = useAuth();
+  const { roster, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
-  const [roleError, setRoleError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleRoleChange = async (userId: string, role: Role) => {
-    setRoleError(null);
     try {
       await updateMemberRole(userId, role);
     } catch (err) {
-      setRoleError(err instanceof Error ? err.message : "Failed to update role");
+      toast({
+        variant: "destructive",
+        description: err instanceof Error ? err.message : "Failed to update role",
+      });
     }
   };
 
-  // DEFAULT_ROSTER seed entries aren't backed by a real Better Auth account (their
-  // ids are decorative demo strings, not Mongo ObjectIds), so the role-change API
-  // can never resolve them — only render the editable control for real accounts.
-  const isRealAccount = (userId: string) => registeredUsers.some((u) => u.id === userId);
-
-  const handleAddMember = (userId: string) => {
-    const user = availableUsers.find((u) => u.id === userId);
-    if (user) addMember(user);
-  };
 
   const handleRemoveMember = (userId: string) => {
     removeMember(userId);
@@ -59,12 +52,10 @@ export default function AdminView() {
     <div style={{ maxWidth: "85%", margin: "0 auto" }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Members</div>
       <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
-        People who can be invited onto boards in this workspace. There is always at least one admin, but there can be more than one — demoting the last remaining admin isn&apos;t allowed.
+        Everyone who signs in shows up here automatically and can&apos;t see any board until you grant access below. There is always at least one admin, but there can be more than one — demoting the last remaining admin isn&apos;t allowed.
       </div>
 
-      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
         {roster.map((m) => (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: `1px solid ${theme.border}`, borderRadius: 9, background: theme.panelBg }}>
             <div style={{ width: 32, height: 32, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -74,23 +65,14 @@ export default function AdminView() {
               <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
               <div style={{ fontSize: 12, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
             </div>
-            {isRealAccount(m.id) ? (
-              <select
-                value={m.role}
-                onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
-                style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-            ) : (
-              <div
-                title="Demo member — not a real account, so its role can't be changed here."
-                style={{ fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "3px 9px", borderRadius: 20, flexShrink: 0 }}
-              >
-                {m.role === "admin" ? "Admin" : "Member"}
-              </div>
-            )}
+            <select
+              value={m.role}
+              onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
+              style={{ padding: "6px 10px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 12.5, background: theme.inputBg, color: theme.text, flexShrink: 0 }}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
             {m.role !== "admin" && (
               <button
                 onClick={() => handleRemoveMember(m.id)}
@@ -101,24 +83,6 @@ export default function AdminView() {
             )}
           </div>
         ))}
-      </div>
-
-      <div style={{ marginBottom: 32 }}>
-        <select
-          value=""
-          onChange={(e) => handleAddMember(e.target.value)}
-          disabled={availableUsers.length === 0}
-          style={{ width: "100%", padding: "9px 12px", border: `1px solid ${theme.border}`, borderRadius: 7, fontFamily: "inherit", fontSize: 13, background: theme.inputBg, color: theme.text }}
-        >
-          <option value="" disabled>
-            {availableUsers.length === 0 ? "No registered users available to add" : "Add a registered user…"}
-          </option>
-          {availableUsers.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name} ({u.email})
-            </option>
-          ))}
-        </select>
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Workspace access</div>

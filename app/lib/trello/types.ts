@@ -26,12 +26,12 @@ export interface Label {
   name: string;
 }
 
-export interface ChecklistItem {
+interface ChecklistItem {
   text: string;
   done: boolean;
 }
 
-export interface CardComment {
+interface CardComment {
   author: string;
   initials: string;
   color: string;
@@ -90,6 +90,12 @@ export interface ThemeColors {
   inputBg: string;
   accent: string;
   accentSubtle: string;
+  warningBg: string;
+  warningBorder: string;
+  warningText: string;
+  dangerBg: string;
+  dangerBorder: string;
+  dangerText: string;
 }
 
 export interface CardDoc extends CardData {
