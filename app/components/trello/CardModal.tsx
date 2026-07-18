@@ -97,7 +97,7 @@ export default function CardModal() {
     >
       <div onClick={stopProp} style={{ width: 600, maxWidth: "100%", background: theme.panelBg, color: theme.text, borderRadius: 12, overflow: "hidden", boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}>
         {locked && (
-          <div style={{ margin: "12px 20px 0", padding: "7px 12px", fontSize: 12, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 7, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ margin: "12px 20px 0", padding: "7px 12px", fontSize: 12, fontWeight: 700, color: theme.warningText, background: theme.warningBg, borderRadius: 7, display: "flex", alignItems: "center", gap: 6 }}>
             <Lock size={13} /> This board is locked — card editing is disabled.
           </div>
         )}
@@ -254,8 +254,8 @@ export default function CardModal() {
                       width: 15,
                       height: 15,
                       borderRadius: 4,
-                      border: `1.5px solid ${item.done ? "#4F46E5" : "#D8D4CB"}`,
-                      background: item.done ? "#4F46E5" : "#fff",
+                      border: `1.5px solid ${item.done ? theme.accent : theme.border}`,
+                      background: item.done ? theme.accent : theme.inputBg,
                       flexShrink: 0,
                       display: "flex",
                       alignItems: "center",

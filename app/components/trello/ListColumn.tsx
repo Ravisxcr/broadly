@@ -68,7 +68,7 @@ export default function ListColumn({ list, locked, isDragOver, onDragOverList, o
       style={{
         width: 264,
         flexShrink: 0,
-        background: isDragOver ? "#EEF2FF" : theme.subtleBg,
+        background: isDragOver ? theme.accentSubtle : theme.subtleBg,
         borderRadius: 10,
         padding: 10,
         display: "flex",

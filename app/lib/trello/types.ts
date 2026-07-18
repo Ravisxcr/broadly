@@ -90,6 +90,9 @@ export interface ThemeColors {
   inputBg: string;
   accent: string;
   accentSubtle: string;
+  warningBg: string;
+  warningBorder: string;
+  warningText: string;
 }
 
 export interface CardDoc extends CardData {

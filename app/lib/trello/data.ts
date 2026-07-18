@@ -80,5 +80,8 @@ export function getThemeColors(dark: boolean): ThemeColors {
     inputBg: dark ? "#1A1B21" : "#FAFAF9",
     accent: "#4F46E5",
     accentSubtle: dark ? "rgba(79,70,229,0.28)" : "#EEF2FF",
+    warningBg: dark ? "rgba(217,119,6,0.18)" : "#FEF3C7",
+    warningBorder: dark ? "rgba(217,119,6,0.4)" : "#FDE68A",
+    warningText: dark ? "#FBBF24" : "#92400E",
   };
 }
