@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { X } from "lucide-react";
 import { useAuth } from "../../lib/trello/contexts/AuthContext";
 import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useWorkspaces } from "../../lib/trello/contexts/WorkspacesContext";
+import { useToast } from "../ui/use-toast";
 import type { Role } from "../../lib/trello/types";
 
 export default function AdminView() {
@@ -13,14 +13,16 @@ export default function AdminView() {
   const { roster, removeMember, updateMemberRole } = useAuth();
   const { boards, updateBoard } = useBoards();
   const { workspaces, updateWorkspace } = useWorkspaces();
-  const [roleError, setRoleError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleRoleChange = async (userId: string, role: Role) => {
-    setRoleError(null);
     try {
       await updateMemberRole(userId, role);
     } catch (err) {
-      setRoleError(err instanceof Error ? err.message : "Failed to update role");
+      toast({
+        variant: "destructive",
+        description: err instanceof Error ? err.message : "Failed to update role",
+      });
     }
   };
 
@@ -52,8 +54,6 @@ export default function AdminView() {
       <div style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 16 }}>
         Everyone who signs in shows up here automatically and can&apos;t see any board until you grant access below. There is always at least one admin, but there can be more than one — demoting the last remaining admin isn&apos;t allowed.
       </div>
-
-      {roleError && <div style={{ fontSize: 12.5, color: "#DC2626", marginBottom: 12 }}>{roleError}</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
         {roster.map((m) => (

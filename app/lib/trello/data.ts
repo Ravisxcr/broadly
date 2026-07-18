@@ -76,5 +76,8 @@ export function getThemeColors(dark: boolean): ThemeColors {
     warningBg: dark ? "rgba(217,119,6,0.18)" : "#FEF3C7",
     warningBorder: dark ? "rgba(217,119,6,0.4)" : "#FDE68A",
     warningText: dark ? "#FBBF24" : "#92400E",
+    dangerBg: dark ? "rgba(225,29,72,0.18)" : "#FEF2F2",
+    dangerBorder: dark ? "rgba(225,29,72,0.4)" : "#FCA5A5",
+    dangerText: dark ? "#FB7185" : "#991B1B",
   };
 }

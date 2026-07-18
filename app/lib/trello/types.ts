@@ -93,6 +93,9 @@ export interface ThemeColors {
   warningBg: string;
   warningBorder: string;
   warningText: string;
+  dangerBg: string;
+  dangerBorder: string;
+  dangerText: string;
 }
 
 export interface CardDoc extends CardData {

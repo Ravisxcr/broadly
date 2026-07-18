@@ -39,3 +39,31 @@ a {
 a:hover {
   color: #4338ca;
 }
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+[data-slot="toast"][data-state="open"] {
+  animation: toast-in 0.2s ease-out;
+}
+
+[data-slot="toast"][data-state="closed"] {
+  animation: toast-out 0.15s ease-in forwards;
+}
