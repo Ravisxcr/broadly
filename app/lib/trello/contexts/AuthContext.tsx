@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AVATAR_COLORS, DEFAULT_ROSTER } from "../data";
+import { AVATAR_COLORS } from "../data";
 import type { AuthUser, Member, Role } from "../types";
 import { authClient } from "../../auth-client";
 import { fetchMembers, updateMemberRole as updateMemberRoleRequest } from "../api";
@@ -18,15 +18,12 @@ function initialsFor(name: string): string {
 
 interface AuthContextValue {
   roster: Member[];
-  /** Registered accounts (from the auth provider) not yet added to the roster. */
-  availableUsers: AuthUser[];
   /** Every registered account, each with its current admin/member role. */
   registeredUsers: AuthUser[];
   currentUserId: string | null;
   currentUser: Member | undefined;
   isAdmin: boolean;
   logout(): void;
-  addMember(user: AuthUser): void;
   removeMember(memberId: string): void;
   updateMemberRole(userId: string, role: Role): Promise<void>;
 }
@@ -34,16 +31,34 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [roster, setRoster] = useState<Member[]>(() => DEFAULT_ROSTER.map((m) => ({ ...m })));
+  // Members hidden from the roster this session (removeMember is local-only,
+  // like the rest of this roster — nothing here is persisted server-side).
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
+  // Optimistic role overrides so a role change shows immediately, ahead of
+  // the "members" query refetch triggered below.
+  const [roleOverrides, setRoleOverrides] = useState<Record<string, Role>>({});
   const queryClient = useQueryClient();
 
   const { data: session, refetch: refetchSession } = authClient.useSession();
   const { data: registeredUsers } = useQuery({ queryKey: ["members"], queryFn: fetchMembers });
 
-  // Dedup by id, not email: DEFAULT_ROSTER seed entries use decorative demo
-  // emails that a real registered account could legitimately share, and that
-  // must not hide the real account from being added/managed.
-  const availableUsers = (registeredUsers ?? []).filter((u) => !roster.some((m) => m.id === u.id));
+  // Anyone who signs in is a real account (via Better Auth) and shows up here
+  // automatically — no explicit "add" step. They still can't see any
+  // board/workspace until an admin grants access below.
+  const roster: Member[] = useMemo(
+    () =>
+      (registeredUsers ?? [])
+        .filter((u) => !removedIds.has(u.id))
+        .map((u, i) => ({
+          id: u.id,
+          initials: initialsFor(u.name),
+          name: u.name,
+          email: u.email,
+          color: AVATAR_COLORS[i % AVATAR_COLORS.length],
+          role: roleOverrides[u.id] ?? u.role,
+        })),
+    [registeredUsers, removedIds, roleOverrides]
+  );
 
   const currentUserId = session?.user?.id ?? null;
 
@@ -69,24 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authClient.signOut();
   };
 
-  const addMember = (user: AuthUser) => {
-    setRoster((r) => {
-      if (r.some((m) => m.id === user.id)) return r;
-      const color = AVATAR_COLORS[r.length % AVATAR_COLORS.length];
-      const newMember: Member = { id: user.id, initials: initialsFor(user.name), name: user.name, email: user.email, color, role: user.role };
-      return [...r, newMember];
-    });
-  };
-
   const removeMember = (memberId: string) => {
-    setRoster((r) => r.filter((m) => m.id !== memberId));
+    setRemovedIds((ids) => new Set(ids).add(memberId));
   };
 
   const roleMutation = useMutation({
     mutationFn: (vars: { userId: string; role: Role }) => updateMemberRoleRequest(vars.userId, vars.role),
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
-      setRoster((r) => r.map((m) => (m.id === updatedUser.id ? { ...m, role: updatedUser.role } : m)));
+      setRoleOverrides((overrides) => ({ ...overrides, [updatedUser.id]: updatedUser.role }));
       // The role write goes straight to the `user` collection, bypassing Better
       // Auth's own update flow, so nothing else tells this session to refetch.
       // If an admin changed their own role, pick that up immediately instead of
@@ -101,8 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthContextValue>(
-    () => ({ roster, availableUsers, registeredUsers: registeredUsers ?? [], currentUserId, currentUser, isAdmin, logout, addMember, removeMember, updateMemberRole }),
-    [roster, availableUsers, registeredUsers, currentUserId, currentUser, isAdmin, updateMemberRole]
+    () => ({ roster, registeredUsers: registeredUsers ?? [], currentUserId, currentUser, isAdmin, logout, removeMember, updateMemberRole }),
+    [roster, registeredUsers, currentUserId, currentUser, isAdmin, updateMemberRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
