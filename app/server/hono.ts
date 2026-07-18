@@ -125,7 +125,7 @@ async function getBoardData(boardId: string): Promise<BoardData | null> {
     cover: boardDoc.cover,
     memberIds: boardDoc.memberIds,
     locked: boardDoc.locked,
-    workspaceId: boardDoc.workspaceId,
+    workspaceId: boardDoc.workspaceId ?? DEFAULT_WORKSPACES[0].id,
     lists,
   };
 }
@@ -142,8 +142,6 @@ app.get("/health", async (c) => {
 
 app.get("/boards", async (c) => {
   const boardsCol = await getBoardsCollection();
-  // Ensure workspaceId for backward compatibility
-  await boardsCol.updateMany({ workspaceId: { $exists: false } }, { $set: { workspaceId: DEFAULT_WORKSPACES[0].id } });
   const boardDocs = await boardsCol.find({}, { projection: { _id: 0 } }).toArray();
 
   const listsCol = await getListsCollection();
@@ -178,7 +176,8 @@ app.get("/boards", async (c) => {
       cover: boardDoc.cover,
       memberIds: boardDoc.memberIds,
       locked: boardDoc.locked,
-      workspaceId: boardDoc.workspaceId,
+      // Backward compatibility: boards created before workspaces existed have no workspaceId.
+      workspaceId: boardDoc.workspaceId ?? DEFAULT_WORKSPACES[0].id,
       lists,
     };
   });
@@ -245,9 +244,9 @@ app.patch("/members/:userId/role", async (c) => {
 
 app.get("/workspaces", async (c) => {
   const collection = await getWorkspacesCollection();
-  await collection.updateMany({ memberIds: { $exists: false } }, { $set: { memberIds: [] } });
   const workspaces = await collection.find({}, { projection: { _id: 0 } }).toArray();
-  return c.json(workspaces);
+  // Backward compatibility: workspaces created before memberIds existed have no memberIds.
+  return c.json(workspaces.map((w) => ({ ...w, memberIds: w.memberIds ?? [] })));
 });
 
 app.post("/workspaces", async (c) => {

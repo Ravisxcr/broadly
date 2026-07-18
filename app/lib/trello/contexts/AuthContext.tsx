@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const { data: session, refetch: refetchSession } = authClient.useSession();
-  const { data: registeredUsers } = useQuery({ queryKey: ["members"], queryFn: fetchMembers });
+  const { data: registeredUsers } = useQuery({ queryKey: ["members"], queryFn: fetchMembers, enabled: !!session?.user });
 
   // Anyone who signs in is a real account (via Better Auth) and shows up here
   // automatically — no explicit "add" step. They still can't see any
