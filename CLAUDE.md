@@ -15,7 +15,7 @@ Package manager is bun (`bun.lock`).
 
 There is no test suite in this repo.
 
-MongoDB must be running and reachable at `MONGODB_URI` (see `.env.example`) for `/api/*` routes to work; the rest of the app runs fine without it.
+MongoDB must be running and reachable at `MONGODB_URI`, with `MONGODB_DB` set to the target database name (see `.env.example`) for `/api/*` routes to work; the rest of the app runs fine without it.
 
 ## Architecture
 
@@ -33,8 +33,9 @@ The app is a single product, **Boardly** (a Trello-style board app):
 
 ### Backend: MongoDB + Hono + TanStack Query + Better Auth
 
-- `app/lib/mongodb.ts` — `MongoClient` singleton (connection string from `MONGODB_URI`, cached on `global` in dev so Turbopack Fast Refresh doesn't reopen connections).
-- Local/standalone MongoDB (no replica set) does not support retryable writes or multi-document transactions. `MONGODB_URI` needs `retryWrites=false`, and `app/server/auth.ts` passes `transaction: false` to `mongodbAdapter` for the same reason — otherwise Better Auth's user-creation flow (which wraps user+account creation in a transaction whenever a `client` is given) fails with `unable_to_create_user` / "This MongoDB deployment does not support retryable writes". Revisit both if the deployment ever moves to a real replica set (e.g. Atlas).
+- `app/lib/mongodb.ts` — `MongoClient` singleton (connection string from `MONGODB_URI`, cached on `global` in dev so Turbopack Fast Refresh doesn't reopen connections). Exports `dbName` (from `MONGODB_DB`), which every `.db(...)` call across the app uses explicitly — `mongodb+srv://` (Atlas) URIs carry no path-based database name, so a bare `client.db()` would throw against production.
+- `MONGODB_URI` should be a user scoped to `readWrite` on just the one app database (see `.env.example`), not a MongoDB admin/root account — the app only ever does plain CRUD on its own collections, never admin commands. Locally, `scripts/create-db-user.mjs` provisions that scoped user (run once against an admin connection); on Atlas there's no exposed admin superuser to script against, so provision it instead via Atlas's Database Access UI with a role scoped to one database (e.g. `readWrite@app`) — Atlas always stores its users in its own `admin` database regardless of which db they're scoped to, so `authSource` there is not the enforcement mechanism (the role's db scope is).
+- Local/standalone MongoDB (no replica set) does not support retryable writes or multi-document transactions. `MONGODB_URI` needs `retryWrites=false`, and `app/server/auth.ts` passes `transaction: false` to `mongodbAdapter` for the same reason — otherwise Better Auth's user-creation flow (which wraps user+account creation in a transaction whenever a `client` is given) fails with `unable_to_create_user` / "This MongoDB deployment does not support retryable writes". Revisit both if the deployment ever moves to a real replica set (e.g. Atlas) — retryable writes/transactions are supported there.
 - `app/server/auth.ts` — the Better Auth instance (`mongodbAdapter`), plus `socialProviders` built conditionally per-provider from env vars (`GITHUB_CLIENT_ID`/`SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`, `MICROSOFT_CLIENT_ID`/`SECRET`/`TENANT_ID`) — a provider is only registered if both id and secret are set. `enabledSocialProviders` is exported for the frontend to know which OAuth buttons to show.
 - `app/server/hono.ts` — the Hono app and all route definitions, kept framework-agnostic and separate from the Next.js mount point. Mounts Better Auth at `/api/auth/**`; exposes `/api/auth-providers`, `/api/health`, `/api/members` (real registered Better Auth users), and full CRUD for `/api/boards`, `/api/workspaces`, and nested lists/cards (`/api/boards/:boardId/lists`, `/api/boards/:boardId/lists/:listId/cards`, `/api/boards/:boardId/cards/:cardId`, `/api/boards/:boardId/move-card`) backed by separate `boards`/`lists`/`cards`/`workspaces` Mongo collections.
 - `app/api/[[...route]]/route.ts` — mounts the Hono app into Next.js's Route Handler convention via `hono/vercel`'s `handle()`. All API routes live under this single catch-all.

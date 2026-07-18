@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { randomUUID } from "crypto";
 import { ObjectId } from "mongodb";
-import clientPromise from "@/app/lib/mongodb";
+import clientPromise, { dbName } from "@/app/lib/mongodb";
 import { COLUMN_TEMPLATES, BOARD_COVERS, DEFAULT_WORKSPACES, WORKSPACE_COLORS } from "@/app/lib/trello/data";
 import type { AuthUser, BoardData, CardData, WorkspaceData, BoardDoc, ListDoc, CardDoc, Role } from "@/app/lib/trello/types";
 import { auth, enabledSocialProviders } from "@/app/server/auth";
@@ -37,32 +37,32 @@ app.get("/auth-providers", (c) => {
 
 async function getBoardsCollection() {
   const client = await clientPromise;
-  return client.db().collection<BoardDoc>("boards");
+  return client.db(dbName).collection<BoardDoc>("boards");
 }
 
 async function getListsCollection() {
   const client = await clientPromise;
-  return client.db().collection<ListDoc>("lists");
+  return client.db(dbName).collection<ListDoc>("lists");
 }
 
 async function getCardsCollection() {
   const client = await clientPromise;
-  return client.db().collection<CardDoc>("cards");
+  return client.db(dbName).collection<CardDoc>("cards");
 }
 
 async function getUsersCollection() {
   const client = await clientPromise;
-  return client.db().collection<UserDoc>("user");
+  return client.db(dbName).collection<UserDoc>("user");
 }
 
 async function getWorkspacesCollection() {
   const client = await clientPromise;
-  return client.db().collection<WorkspaceData>("workspaces");
+  return client.db(dbName).collection<WorkspaceData>("workspaces");
 }
 
 async function getMetaCollection() {
   const client = await clientPromise;
-  return client.db().collection<AdminCountDoc>("_meta");
+  return client.db(dbName).collection<AdminCountDoc>("_meta");
 }
 
 /** Self-heals the admin counter from real data the first time it's needed (e.g. against a pre-existing DB). */
@@ -136,7 +136,7 @@ function emptyCard(id: string, boardId: string, listId: string, title: string): 
 
 app.get("/health", async (c) => {
   const client = await clientPromise;
-  await client.db().command({ ping: 1 });
+  await client.db(dbName).command({ ping: 1 });
   return c.json({ ok: true, mongo: "connected" });
 });
 
