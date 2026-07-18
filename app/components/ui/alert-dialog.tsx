@@ -116,8 +116,6 @@ function AlertDialogCancel({ className, style, ...props }: React.ComponentProps<
 
 export {
   AlertDialog,
-  AlertDialogPortal,
-  AlertDialogOverlay,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogFooter,

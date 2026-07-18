@@ -26,12 +26,12 @@ export interface Label {
   name: string;
 }
 
-export interface ChecklistItem {
+interface ChecklistItem {
   text: string;
   done: boolean;
 }
 
-export interface CardComment {
+interface CardComment {
   author: string;
   initials: string;
   color: string;

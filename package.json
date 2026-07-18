@@ -6,7 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "knip": "knip",
+    "secretlint": "secretlint \"**/*\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx}": [
+      "eslint --fix"
+    ],
+    "*": [
+      "secretlint"
+    ]
   },
   "dependencies": {
     "@better-auth/mongo-adapter": "^1.6.23",
@@ -25,13 +36,18 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@secretlint/secretlint-rule-no-dotenv": "^13.0.2",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
-    "playwright": "^1.61.1",
+    "husky": "^9.1.7",
+    "knip": "^6.27.0",
+    "lint-staged": "^17.0.8",
+    "secretlint": "^13.0.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

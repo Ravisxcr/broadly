@@ -17,7 +17,8 @@
       "Bash(curl -s -o /dev/null -w \"3001:%{http_code}\\\\n\" http://localhost:3001 --max-time 3)",
       "Bash(sed -i 's/3001/3000/g' \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro.js\")",
       "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro2.js\")",
-      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro3.js\")"
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/rranj/AppData/Local/Temp/claude/e--My-Code-broadly/9efedb65-3a3a-4574-9db4-14d74f9359e2/scratchpad/repro3.js\")",
+      "Bash(git config *)"
     ]
   }
 }
