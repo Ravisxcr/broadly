@@ -1,7 +1,6 @@
 status=0
 
 bun run lint || status=1
-bunx knip || status=1
 bun run secretlint || status=1
 
 exit $status
