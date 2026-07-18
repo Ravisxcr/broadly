@@ -8,6 +8,7 @@ import { useTheme } from "../../lib/trello/contexts/ThemeContext";
 import { useBoards } from "../../lib/trello/contexts/BoardsContext";
 import { useNavigation } from "../../lib/trello/contexts/NavigationContext";
 import type { Label, ListData, Member } from "../../lib/trello/types";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 interface ListColumnProps {
   list: ListData;
@@ -29,6 +30,7 @@ export default function ListColumn({ list, locked, isDragOver, onDragOverList, o
   const [titleDraft, setTitleDraft] = useState(list.title);
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [cardTitleDraft, setCardTitleDraft] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const startEditTitle = () => {
     setTitleDraft(list.title);
@@ -42,7 +44,8 @@ export default function ListColumn({ list, locked, isDragOver, onDragOverList, o
     renameList(activeBoardId, list.id, title);
   };
 
-  const handleDeleteList = () => {
+  const handleDeleteList = () => setIsDeleting(true);
+  const confirmDeleteList = () => {
     if (selectedListId === list.id) closeCard();
     if (!activeBoardId) return;
     deleteList(activeBoardId, list.id);
@@ -132,6 +135,14 @@ export default function ListColumn({ list, locked, isDragOver, onDragOverList, o
             <X size={14} />
           </button>
         )}
+        <ConfirmDeleteDialog
+          open={isDeleting}
+          onOpenChange={setIsDeleting}
+          title="Delete this list?"
+          description={`"${list.title}" and all its cards will be permanently deleted. This can't be undone.`}
+          confirmLabel="Delete list"
+          onConfirm={confirmDeleteList}
+        />
       </div>
 
       <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "0 2px 4px" }}>
